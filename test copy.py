@@ -28,37 +28,50 @@ ui_file_path = os.path.join(script_dir, "testUserInterface.ui")
 form_class = uic.loadUiType(ui_file_path)[0]
 
 
-class Thread1(QThread):
-    #parent = MainWidget을 상속 받음.
-    def __init__(self, parent, ser, dataCheckPoint, input_Value_signal, dataCheckPoint_signal):
-        super().__init__(parent)
+class SerialThread(QThread):
+    data_received = pyqtSignal(list)
+
+    def __init__(self, ser):
+        super().__init__()
         self.ser = ser
-        self.dataCheckPoint = dataCheckPoint
-        self.input_Value_signal = input_Value_signal
-        self.dataCheckPoint_signal = dataCheckPoint_signal 
+
     def run(self):
-        self.text = ['A', 'B', 'C', 'D', 'E']
-        
-        for data in self.text:
-            self.dataCheckPoint = False
-            self.received_data = []
-            self.input_Value_signal.emit(data)
-            self.dataCheckPoint_signal.emit(self.dataCheckPoint)
-            encode_data = data.encode()
-            self.ser.write(encode_data)
-            time.sleep(2)
+        while True:
+            if self.ser and self.ser.readable():
+                try:
+                    res = self.ser.read(8)
+                    hex_representation = ' '.join([format(byte, '02X') for byte in res])
+                    buffer = hex_representation.split()
+                    received_data = []
+                    for i in range(len(buffer)):
+                        received_data.append(buffer[i])
+
+                    time.sleep(0.1)
+                    if self.ser.in_waiting < 8:
+                        res = self.ser.read(self.ser.in_waiting)
+                        hex_representation = ' '.join([format(byte, '02X') for byte in res])
+                        buffer = hex_representation.split()
+                        for i in range(len(buffer)):
+                            received_data.append(buffer[i])
+
+                    self.data_received.emit(received_data)
+
+                except serial.SerialException as e:
+                    print(f"시리얼 포트에서 읽을 때 오류 발생: {e}")
+                    return
+                except Exception as e:
+                    print(f"예기치 않은 오류: {e}")
+                    return
+            else:
+                print("시리얼 포트가 열려 있지 않거나 읽을 수 없습니다.")
+                time.sleep(1)
+
 
 
 class WindowClass(QMainWindow, form_class):
-    input_Value_signal = pyqtSignal(str)
-    dataCheckPoint_signal = pyqtSignal(bool)
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.input_Value = None
-        self.input_Value_signal.connect(self.updateInputValue)
-        self.dataCheckPoint_signal.connect(self.updateDataCheckPoint)
-        self.received_data = []
         # 시스템 테이블 column 헤더와 row 헤더 안보이도록 설정
         self.SystemTable.horizontalHeader().setVisible(False)
         self.SystemTable.verticalHeader().setVisible(False)
@@ -76,7 +89,7 @@ class WindowClass(QMainWindow, form_class):
         self.simulate_timer = QTimer(self)
         self.preiod = 10000
         # 주기적으로 작동되는 태스크를 설정
-        self.simulate_timer.timeout.connect(self.startPeriodicTask)
+        self.simulate_timer.timeout.connect(self.startPreiodicTask)
         # 버튼 눌렀을 때의 시그널 설정
         self.inputBtn.clicked.connect(self.inputBtn_Push)
         
@@ -85,13 +98,6 @@ class WindowClass(QMainWindow, form_class):
         self.openBtn.setEnabled(True)
         self.openBtn.clicked.connect(self.openPort)
         self.closeBtn.clicked.connect(self.closePort)
-
-
-    def updateInputValue(self, value):
-        self.input_Value = value
-
-    def updateDataCheckPoint(self, datacheckPoint):
-        self.dataCheckPoint = datacheckPoint
 
     def openPort(self):
         selected_Port = self.portCBox.currentText()
@@ -125,7 +131,7 @@ class WindowClass(QMainWindow, form_class):
                             self.received_data.append(buffer[i])
                         
                         # 8byte를 읽고나서 8바이트 미만의 나머지 바이트를 읽어들이는 코드
-                        time.sleep(0.01)
+                        time.sleep(0.1)
                         if self.ser.in_waiting < 8:
                             res = self.ser.read(self.ser.in_waiting) 
                             hex_representation = ' '.join([format(byte, '02X') for byte in res])
@@ -190,21 +196,29 @@ class WindowClass(QMainWindow, form_class):
             print("Serial port is not open.")
             self.openBtn.setEnabled(True)
     
-    def startPeriodicTask(self):
-        periodicTaksThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal)
-        periodicTaksThread.start()        
+    def startPreiodicTask(self):
         
+        self.text = ['A', 'B', 'C', 'D', 'E']
+        
+        for data in self.text:
+            self.dataCheckPoint = False
+            self.received_data = []
+            self.input_Value = data
+            encode_data = data.encode()
+            self.ser.write(encode_data)
+            time.sleep(1.2)
+
     def inputBtn_Push(self):
-        #데이터 체크포인트 설정
-        self.dataCheckPoint = False
         # 주기적인 작업을 시작합니다.
-        self.startPeriodicTask()
+        self.startPreiodicTask()
 
         # 주기적으로 버튼을 클릭하는 것을 시뮬레이션하기 위해 QTimer를 사용합니다.
         self.simulate_timer.start(self.preiod)
     
+        
+
     def updateTable(self):
-        print(len(self.received_data))
+            
         main_table = getattr(self, 'df_table')
         
 
@@ -217,7 +231,7 @@ class WindowClass(QMainWindow, form_class):
         
         # 한 번만 시행됨.
         if self.dataCheckPoint == False:
-            print("datacheck")
+            
             
             self.dataCheckPoint = True
             self.received_data.pop(0)
@@ -401,8 +415,7 @@ class WindowClass(QMainWindow, form_class):
             Rack_DCDC_Relay = Dianostic_list[11]
             item = self.bitCheck(Rack_DCDC_Relay)
             self.dianostic_table.setItem(11, 1, item)
-        # 다시 초기화
-        self.received_data = []
+        
                 
 
     def updateContent(self, index):
