@@ -6,13 +6,13 @@ from PyQt5.QtQuickWidgets import QQuickWidget
 from PyQt5.QtCore import Qt, QUrl, QObject, QTimer, QThread, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtGui import QFont
-
+from datetime import datetime
 import time
 import os
 import serial
 import threading
 import time
-
+now = time.time()
  
 
 if getattr(sys, 'frozen', False):
@@ -42,16 +42,20 @@ class Thread1(QThread):
         for data in self.text:
             self.dataCheckPoint = False
             self.received_data = []
+            print("문자열 변환 : ", time.strftime("%H:%M:%S", time.gmtime(now)))
             self.input_Value_signal.emit(data)
             self.dataCheckPoint_signal.emit(self.dataCheckPoint)
             encode_data = data.encode()
             self.ser.write(encode_data)
+            # 아래의 값은 serial의 스레드가 데이터를 읽는 시간 * 9 는 되어야함 
             time.sleep(2)
+
 
 
 class WindowClass(QMainWindow, form_class):
     input_Value_signal = pyqtSignal(str)
     dataCheckPoint_signal = pyqtSignal(bool)
+
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -71,6 +75,11 @@ class WindowClass(QMainWindow, form_class):
         self.RackInfoTab.currentChanged.connect(self.updateContent)
         # Initialize the content
         self.updateContent(0)
+        # period_pbar = progressbar를 뜻함. 초기는 0 % 임.
+        self.period_pbar_value = 0
+        self.period_pbar.setValue(self.period_pbar_value)
+        
+
 
         # 주기적으로 버튼이 클릭되어 데이터가 나타나도록 함.
         self.simulate_timer = QTimer(self)
@@ -79,7 +88,6 @@ class WindowClass(QMainWindow, form_class):
         self.simulate_timer.timeout.connect(self.startPeriodicTask)
         # 버튼 눌렀을 때의 시그널 설정
         self.inputBtn.clicked.connect(self.inputBtn_Push)
-        
         # 포트를 여는 Open 버튼을 눌렀을때 발생하는 이벤트 설정
         self.closeBtn.setEnabled(False)
         self.openBtn.setEnabled(True)
@@ -92,6 +100,7 @@ class WindowClass(QMainWindow, form_class):
 
     def updateDataCheckPoint(self, datacheckPoint):
         self.dataCheckPoint = datacheckPoint
+        print("asd")
 
     def openPort(self):
         selected_Port = self.portCBox.currentText()
@@ -125,7 +134,7 @@ class WindowClass(QMainWindow, form_class):
                             self.received_data.append(buffer[i])
                         
                         # 8byte를 읽고나서 8바이트 미만의 나머지 바이트를 읽어들이는 코드
-                        time.sleep(0.01)
+                        time.sleep(0.2)
                         if self.ser.in_waiting < 8:
                             res = self.ser.read(self.ser.in_waiting) 
                             hex_representation = ' '.join([format(byte, '02X') for byte in res])
@@ -191,8 +200,24 @@ class WindowClass(QMainWindow, form_class):
             self.openBtn.setEnabled(True)
     
     def startPeriodicTask(self):
+        self.period_pbar_value = 0
+        self.period_pbar.setValue(self.period_pbar_value)
+        
+        # 테이블들 비우기
+        self.df_table.clearContents()
+        
+        for row in range(0, self.SystemTable.rowCount()):
+            self.SystemTable.takeItem(row, 1)
+
+        for row in range(0, self.dianostic_table.rowCount()):
+            self.dianostic_table.takeItem(row, 1)
+
         periodicTaksThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal)
-        periodicTaksThread.start()        
+        periodicTaksThread.start()
+
+        self.period_pbar_Timer = QTimer(self)
+        self.period_pbar_Timer.timeout.connect(self.updateProgressBar)
+        self.period_pbar_Timer.start(200)  
         
     def inputBtn_Push(self):
         #데이터 체크포인트 설정
@@ -203,6 +228,31 @@ class WindowClass(QMainWindow, form_class):
         # 주기적으로 버튼을 클릭하는 것을 시뮬레이션하기 위해 QTimer를 사용합니다.
         self.simulate_timer.start(self.preiod)
     
+    def updateProgressBar(self):
+        
+        if self.input_Value == 'A':
+            if self.period_pbar_value <= 100:
+                self.period_pbar_value += 20
+                self.period_pbar.setValue(self.period_pbar_value)
+        elif self.input_Value == 'B':
+            if self.period_pbar_value <= 100:
+                self.period_pbar_value += 20
+                self.period_pbar.setValue(self.period_pbar_value)
+        elif self.input_Value == 'C':
+            if self.period_pbar_value <= 100:
+                self.period_pbar_value += 20
+                self.period_pbar.setValue(self.period_pbar_value)
+        elif self.input_Value == 'D':
+            if self.period_pbar_value <= 100:
+                self.period_pbar_value += 20
+                self.period_pbar.setValue(self.period_pbar_value)
+        elif self.input_Value == 'E':
+            if self.period_pbar_value <= 100:
+                self.period_pbar_value += 20
+                self.period_pbar.setValue(self.period_pbar_value)
+        else:
+            self.period_pbar_Timer.stop()
+
     def updateTable(self):
         print(len(self.received_data))
         main_table = getattr(self, 'df_table')
