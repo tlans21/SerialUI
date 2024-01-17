@@ -1,9 +1,9 @@
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QTableWidgetItem, QHBoxLayout, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QTableWidgetItem, QHBoxLayout, QWidget, QMessageBox
 from PyQt5.QtQuickWidgets import QQuickWidget
-from PyQt5.QtCore import Qt, QUrl, QObject, QTimer, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QUrl, QObject, QTimer, QThread, pyqtSignal,  QSettings
 from PyQt5.QtGui import QColor
 from PyQt5.QtGui import QFont
 from datetime import datetime
@@ -30,16 +30,19 @@ form_class = uic.loadUiType(ui_file_path)[0]
 
 class Thread1(QThread):
     #parent = MainWidget을 상속 받음.
-    def __init__(self, parent, ser, dataCheckPoint, input_Value_signal, dataCheckPoint_signal):
+    def __init__(self, parent, ser, dataCheckPoint, input_Value_signal, dataCheckPoint_signal, progress_signal, text_list):
         super().__init__(parent)
         self.ser = ser
         self.dataCheckPoint = dataCheckPoint
         self.input_Value_signal = input_Value_signal
-        self.dataCheckPoint_signal = dataCheckPoint_signal 
+        self.dataCheckPoint_signal = dataCheckPoint_signal
+        self.progress_signal = progress_signal
+        self.text = text_list
     def run(self):
-        self.text = ['A', 'B', 'C', 'D', 'E']
+
         
-        for data in self.text:
+        for step, data in enumerate(self.text):
+            total_steps = len(self.text)
             self.dataCheckPoint = False
             self.received_data = []
             print("문자열 변환 : ", time.strftime("%H:%M:%S", time.gmtime(now)))
@@ -47,22 +50,31 @@ class Thread1(QThread):
             self.dataCheckPoint_signal.emit(self.dataCheckPoint)
             encode_data = data.encode()
             self.ser.write(encode_data)
-            # 아래의 값은 serial의 스레드가 데이터를 읽는 시간 * 9 는 되어야함 
-            time.sleep(2)
+            # 아래의 값은 serial의 스레드가 데이터를 읽는 시간 * 9 는 되어야함
+            time.sleep(1)
+            progress_percentage = int((step + 1) / total_steps * 100)
+            self.progress_signal.emit(progress_percentage)
 
 
 
 class WindowClass(QMainWindow, form_class):
     input_Value_signal = pyqtSignal(str)
     dataCheckPoint_signal = pyqtSignal(bool)
-
+    # Home Tab의 데이터 프레임 A~E에서의 프로그레스 시그널
+    progress_signal = pyqtSignal(int)
+    
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        
+        # -------------------------------------------Home TAB ---------------------------------------------------------------------------------
         self.input_Value = None
         self.input_Value_signal.connect(self.updateInputValue)
         self.dataCheckPoint_signal.connect(self.updateDataCheckPoint)
+        self.progress_signal.connect(self.updateProgressBar)
         self.received_data = []
+        
+        
         # 시스템 테이블 column 헤더와 row 헤더 안보이도록 설정
         self.SystemTable.horizontalHeader().setVisible(False)
         self.SystemTable.verticalHeader().setVisible(False)
@@ -75,24 +87,65 @@ class WindowClass(QMainWindow, form_class):
         self.RackInfoTab.currentChanged.connect(self.updateContent)
         # Initialize the content
         self.updateContent(0)
-        # period_pbar = progressbar를 뜻함. 초기는 0 % 임.
+        # period_pbar = progressbar를 뜻함. Home Tab 초기는 0 % 임.
         self.period_pbar_value = 0
         self.period_pbar.setValue(self.period_pbar_value)
-        
-
-
+    
+        self.load_settings() 
         # 주기적으로 버튼이 클릭되어 데이터가 나타나도록 함.
         self.simulate_timer = QTimer(self)
-        self.preiod = 10000
+        self.period = 15000
         # 주기적으로 작동되는 태스크를 설정
         self.simulate_timer.timeout.connect(self.startPeriodicTask)
         # 버튼 눌렀을 때의 시그널 설정
+        self.inputBtn.setEnabled(False)
         self.inputBtn.clicked.connect(self.inputBtn_Push)
         # 포트를 여는 Open 버튼을 눌렀을때 발생하는 이벤트 설정
         self.closeBtn.setEnabled(False)
         self.openBtn.setEnabled(True)
         self.openBtn.clicked.connect(self.openPort)
+        
         self.closeBtn.clicked.connect(self.closePort)
+        # -------------------------------------------Home TAB ---------------------------------------------------------------------------------
+
+        # ---------------------------------------------------------- Moudle Tab 부분 ---------------------------------------------------------
+        
+        # module탭의 테이블 헤더 삭제하는 메서드
+        self.module_table_HeaderRemove()
+
+        # ---------------------------------------------------------- Moudle Tab 부분 ---------------------------------------------------------
+
+        # ---------------------------------------------------------- Setting Tab 부분 ---------------------------------------------------------
+        self.inputBtn2.clicked.connect(self.inputBtn2_Push)
+        self.inputBtn2_period = 30000
+        self.simulate_timer2 = QTimer()
+        self.simulate_timer2.timeout.connect(self.startPeriodicTask2)
+
+        # ---------------------------------------------------------- Setting Tab 부분 ---------------------------------------------------------
+    def load_settings_for_combo_box(self, key, combo_box):
+        settings = QSettings("test", "test1")
+        saved_index = settings.value(key, 0, type=int)
+        combo_box.setCurrentIndex(saved_index)
+
+    def load_settings(self):
+        self.load_settings_for_combo_box("portCBox", self.portCBox)
+        self.load_settings_for_combo_box("BaudCBox", self.BaudCBox)
+        self.load_settings_for_combo_box("DataBitCBox", self.DataBitCBox)
+        self.load_settings_for_combo_box("parityBitCBox", self.parityBitCBox)
+        self.load_settings_for_combo_box("StopBitCBox", self.StopBitCBox)
+    
+    
+    def save_settings(self):
+        self.save_settings_for_combo_box("portCBox", self.portCBox)
+        self.save_settings_for_combo_box("BaudCBox", self.BaudCBox)
+        self.save_settings_for_combo_box("DataBitCBox", self.DataBitCBox)
+        self.save_settings_for_combo_box("parityBitCBox", self.parityBitCBox)
+        self.save_settings_for_combo_box("StopBitCBox", self.StopBitCBox)
+        
+    def save_settings_for_combo_box(self, key, combo_box):
+        settings = QSettings("test", "test1")
+        settings.setValue(key, combo_box.currentIndex()) 
+
 
 
     def updateInputValue(self, value):
@@ -100,25 +153,21 @@ class WindowClass(QMainWindow, form_class):
 
     def updateDataCheckPoint(self, datacheckPoint):
         self.dataCheckPoint = datacheckPoint
-        print("asd")
 
     def openPort(self):
+        # 시리얼 통신을 위한 콤보박스 지정하는 것을 저장
+        self.inputBtn.setEnabled(True)
+        self.save_settings()
+
         selected_Port = self.portCBox.currentText()
         selected_BaudRate = self.BaudCBox.currentText()
-        selected_DateBit = self.DateBitCBox.currentText()
+        selected_DataBit = self.DataBitCBox.currentText()
         selected_ParityBit= self.parityBitCBox.currentText()
         selected_StopBit = self.StopBitCBox.currentText()
-        # print(type(selected_Port))
-        # print(type(selected_BaudRate))
-        # print(type(selected_DateBit))
-        # print(selected_ParityBit)
-        # print(selected_StopBit)
-
-        
-        
+           
         # 시리얼 통신 시작
         self.ser = serial.Serial(port = selected_Port, baudrate = int(selected_BaudRate), stopbits= int(selected_StopBit))
-        
+
         def readthread():
             while True:
                 
@@ -129,20 +178,20 @@ class WindowClass(QMainWindow, form_class):
                         hex_representation = ' '.join([format(byte, '02X') for byte in res])
                         print(hex_representation)
                         buffer = hex_representation.split()
-                        print(len(buffer))
                         for i in range(len(buffer)):
                             self.received_data.append(buffer[i])
                         
                         # 8byte를 읽고나서 8바이트 미만의 나머지 바이트를 읽어들이는 코드
-                        time.sleep(0.2)
+                        time.sleep(0.05)
                         if self.ser.in_waiting < 8:
                             res = self.ser.read(self.ser.in_waiting) 
                             hex_representation = ' '.join([format(byte, '02X') for byte in res])
                             print(hex_representation)
                             buffer = hex_representation.split()
-                            print(len(buffer))
+
                             for i in range(len(buffer)):
                                 self.received_data.append(buffer[i])
+                            print(len(self.received_data))
                             self.updateTable()
                         
                     except serial.SerialException as e:
@@ -164,11 +213,23 @@ class WindowClass(QMainWindow, form_class):
         self.closeBtn.setEnabled(True)
         self.openBtn.setEnabled(False)
         
-        # data = self.input_edit.text()
-        # data = data.encode()
-        # self.ser.write(data)
-        # self.closeBtn.setEnabled(True)
-        # self.openBtn.setEnabled(False)
+    def closePort(self):
+        print(self.ser)
+        print(hasattr(self, 'ser'))
+        print(self.ser.is_open)
+        if hasattr(self, 'ser') and self.ser and self.ser.is_open:
+            self.ser.close()
+            print("Serial port closed.")
+            print(self.ser.is_open)
+            self.openBtn.setEnabled(True)
+            # 포트를 닫았으므로 입력 버튼 비활성화
+            self.inputBtn.setEnabled(False)
+        else:
+            print("Serial port is not open.")
+            self.openBtn.setEnabled(True)
+            
+    
+    
     def bitCheck(self, bit):
         item = QTableWidgetItem()
 
@@ -186,19 +247,6 @@ class WindowClass(QMainWindow, form_class):
 
         return item
 
-    def closePort(self):
-        print(self.ser)
-        print(hasattr(self, 'ser'))
-        print(self.ser.is_open)
-        if hasattr(self, 'ser') and self.ser and self.ser.is_open:
-            self.ser.close()
-            print("Serial port closed.")
-            print(self.ser.is_open)
-            self.openBtn.setEnabled(True)
-        else:
-            print("Serial port is not open.")
-            self.openBtn.setEnabled(True)
-    
     def startPeriodicTask(self):
         self.period_pbar_value = 0
         self.period_pbar.setValue(self.period_pbar_value)
@@ -211,56 +259,59 @@ class WindowClass(QMainWindow, form_class):
 
         for row in range(0, self.dianostic_table.rowCount()):
             self.dianostic_table.takeItem(row, 1)
-
-        periodicTaksThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal)
+        self.text_list = ['A', 'B', 'C', 'D', 'E']
+        periodicTaksThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list)
         periodicTaksThread.start()
 
-        self.period_pbar_Timer = QTimer(self)
-        self.period_pbar_Timer.timeout.connect(self.updateProgressBar)
-        self.period_pbar_Timer.start(200)  
+        # self.period_pbar_Timer = QTimer(self)
+        # self.period_pbar_Timer.timeout.connect()
+        # self.period_pbar_Timer.start(200)  
         
     def inputBtn_Push(self):
         #데이터 체크포인트 설정
         self.dataCheckPoint = False
+        # 입력된 주기
+        interval = int(self.lineEdit_Interval.text())
+
+        # 주기가 0.1 * 9 * 6 미만으로는 안됨. 약 6초이하로는 설정 안되도록 하고 종료시킴
+        if interval < 8:
+            notification = QMessageBox(self)
+            notification.setWindowTitle("알림 메세지")
+            notification.setText("8초 미만으로는 Interval을 설정할 수 없습니다.")
+            notification.setIcon(QMessageBox.Information)
+            notification.exec_()
+            return
+        
+        self.period = interval * 1000 # ms 단위 이므로 1000울 곱합니다.
+
+
         # 주기적인 작업을 시작합니다.
         self.startPeriodicTask()
 
         # 주기적으로 버튼을 클릭하는 것을 시뮬레이션하기 위해 QTimer를 사용합니다.
-        self.simulate_timer.start(self.preiod)
+        self.simulate_timer.start(self.period) # 10000 period
     
-    def updateProgressBar(self):
-        
-        if self.input_Value == 'A':
-            if self.period_pbar_value <= 100:
-                self.period_pbar_value += 20
-                self.period_pbar.setValue(self.period_pbar_value)
-        elif self.input_Value == 'B':
-            if self.period_pbar_value <= 100:
-                self.period_pbar_value += 20
-                self.period_pbar.setValue(self.period_pbar_value)
-        elif self.input_Value == 'C':
-            if self.period_pbar_value <= 100:
-                self.period_pbar_value += 20
-                self.period_pbar.setValue(self.period_pbar_value)
-        elif self.input_Value == 'D':
-            if self.period_pbar_value <= 100:
-                self.period_pbar_value += 20
-                self.period_pbar.setValue(self.period_pbar_value)
-        elif self.input_Value == 'E':
-            if self.period_pbar_value <= 100:
-                self.period_pbar_value += 20
-                self.period_pbar.setValue(self.period_pbar_value)
-        else:
-            self.period_pbar_Timer.stop()
+    def updateProgressBar(self, value):
+        self.period_pbar_value = value
+        self.period_pbar.setValue(self.period_pbar_value)
 
+    
+            
+        
     def updateTable(self):
         print(len(self.received_data))
         main_table = getattr(self, 'df_table')
-        
+        print(self.text_list)
+        # Home Tab 부분의 테이블 실행
+        if self.text_list == ['A', 'B', 'C', 'D', 'E']:
+            self.updateHomeTab()
+            return
+        elif self.text_list == ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's']:
+            self.updateModuleTab()
+            return
 
-        # Clear the existing content in the tables
-        
 
+    def updateHomeTab(self):
         STX = self.received_data[0]
         return_cmd = self.received_data[1]
         rack_num = self.received_data[2]
@@ -384,12 +435,6 @@ class WindowClass(QMainWindow, form_class):
                 shift_n = (0x01 << (k+1))
             print(Dianostic_list)
 
-
- 
-
-            
-        
-
         #입력 값이 'A'면, 모듈의 개수만큼의 행들의 값들이 채워진다.
 
         if self.input_Value == 'A':
@@ -453,8 +498,77 @@ class WindowClass(QMainWindow, form_class):
             self.dianostic_table.setItem(11, 1, item)
         # 다시 초기화
         self.received_data = []
-                
+    def updateModuleTab(self):
 
+        STX = self.received_data[0]
+        return_cmd = self.received_data[1]
+        rack_num = int(self.received_data[2], 16)
+        Module_num = int(self.received_data[3], 16)
+        # 한 번만 시행됨.
+       
+        
+        self.received_data.pop(0) # STX 팝
+        self.received_data.pop(0) # return_cmd 팝
+        self.received_data.pop(0) # rack_num 팝
+        self.received_data.pop(0) # Module_num 팝
+        # Vcell
+        
+        Vcell_list = []
+        for i in range(0, 22):
+            # Vcell 부분
+            # 0 ~ 43, 0~1 0, 2, 3 1    4,5, 2  40, 41 20 42 43, 21
+            if i < 20:
+                Vcell_H = int(self.received_data[2*i], 16)
+                Vcell_L = int(self.received_data[2*i + 1], 16)
+                Vcell = round(float(Vcell_H  * 256 + Vcell_L) * 0.001, 3) 
+            # Vcell max
+            elif i == 20:
+                Vcell_max_H = int(self.received_data[2*i], 16)
+                Vcell_max_L = int(self.received_data[2*i + 1], 16)
+                Vcell = round(float(Vcell_max_H * 256 + Vcell_max_L) * 0.001, 3)
+            # Vcell min
+            elif i == 21:
+                Vcell_max_H = int(self.received_data[2*i], 16)
+                Vcell_max_L = int(self.received_data[2*i + 1], 16)
+                Vcell = round(float(Vcell_max_H * 256 + Vcell_max_L) * 0.001, 3)
+            # 0~19 인덱스까지 Vcell, 20, 21 max, min
+            Vcell_list.append(Vcell)
+        # Tcell
+        Tcell_list = []
+        for i in range(44, 64):
+            # offset -50
+            Tcell = int(self.received_data[i], 16) - 50
+            Tcell_list.append(Tcell)
+        # Tcell max, min
+        Tcell_max = int(self.received_data[64], 16) - 50
+        Tcell_list.append(Tcell_max)
+        Tcell_min = int(self.received_data[65], 16) - 50
+        Tcell_list.append(Tcell_min)
+
+        # 값을 입력할 테이블 지정
+        current_tableWidget = getattr(self, f'Module_table_{Module_num}')
+        
+        print(Module_num)
+        
+        for row in range(0, len(Vcell_list)):
+            item = QTableWidgetItem(str(Vcell_list[row]))
+            current_tableWidget.setItem(row, 0, item)
+
+            item2 = QTableWidgetItem(str(Tcell_list[row]))
+            current_tableWidget.setItem(row, 1, item2)
+
+        self.received_data = []
+        
+        print("self.recived 비우기 성공")
+
+    def module_table_HeaderRemove(self):
+        for i in range(1, 21):
+            # 테이블 1번부터 20번까지 지정
+            current_tableWidget = getattr(self, f'Module_table_{i}')
+            # 수직, 수평 헤더 안보이게 설정.
+            current_tableWidget.horizontalHeader().setVisible(False)
+            
+    
     def updateContent(self, index):
         # 레이아웃이 누적되지 않도록 클릭때마다 지우기
         while self.horizontalLayout.count():
@@ -542,7 +656,53 @@ class WindowClass(QMainWindow, form_class):
         self.horizontalLayout.addWidget(quickWidget)
         self.horizontalLayout.addWidget(quickWidget2)
         self.horizontalLayout.addWidget(quickWidget3)
+    # --------------------------------------------------Setting Tab 부분의 메서드
+    def inputBtn2_Push(self):
+        interval = int(self.lineEdit_Interval_2.text())
 
+
+        # 주기가 0.1 * 9 * 6 미만으로는 안됨. 약 6초이하로는 설정 안되도록 하고 종료시킴
+        if interval < 30 :
+            notification = QMessageBox(self)
+            notification.setWindowTitle("알림 메세지")
+            notification.setText("30초 미만으로는 Interval을 설정할 수 없습니다.")
+            notification.setIcon(QMessageBox.Information)
+            notification.exec_()
+            return
+        
+        self.period2 = interval * 1000 # ms 단위 이므로 1000울 곱합니다.
+        
+        #데이터 체크포인트 설정
+        self.dataCheckPoint = False
+        # 주기적인 작업을 시작합니다.
+        self.startPeriodicTask2()
+
+        self.simulate_timer2.start(self.period2) # 30000 period
+
+
+    def startPeriodicTask2(self):
+        self.period_pbar_value = 0
+        self.period_pbar.setValue(self.period_pbar_value)
+        
+        # 테이블들 비우기
+        for i in range(1, 21):
+            # 테이블 1번부터 20번까지 지정
+            current_tableWidget = getattr(self, f'Module_table_{i}')
+            # 테이블 비우기
+            current_tableWidget.clearContents()
+        # 
+            
+        self.text_list = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's']
+        periodicTaksThread2 = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list)
+        periodicTaksThread2.start()
+        
+        # self.period_pbar_Timer = QTimer(self)
+        # self.period_pbar_Timer.timeout.connect()
+        # self.period_pbar_Timer.start(200)  
+
+
+    # --------------------------------------------------Setting Tab 부분의 메서드
+        
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
