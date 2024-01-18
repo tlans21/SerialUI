@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import *
 from PyQt5 import uic
-from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QTableWidgetItem, QHBoxLayout, QWidget, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QTableWidgetItem, QHBoxLayout, QWidget, QMessageBox, QFileDialog
 from PyQt5.QtQuickWidgets import QQuickWidget
 from PyQt5.QtCore import Qt, QUrl, QObject, QTimer, QThread, pyqtSignal,  QSettings
 from PyQt5.QtGui import QColor
@@ -12,6 +12,7 @@ import os
 import serial
 import threading
 import time
+import csv
 now = time.time()
  
 
@@ -30,7 +31,7 @@ form_class = uic.loadUiType(ui_file_path)[0]
 
 class Thread1(QThread):
     #parent = MainWidget을 상속 받음.
-    def __init__(self, parent, ser, dataCheckPoint, input_Value_signal, dataCheckPoint_signal, progress_signal, text_list):
+    def __init__(self, parent, ser, dataCheckPoint, input_Value_signal, dataCheckPoint_signal, progress_signal, text_list, close_signal):
         super().__init__(parent)
         self.ser = ser
         self.dataCheckPoint = dataCheckPoint
@@ -38,31 +39,30 @@ class Thread1(QThread):
         self.dataCheckPoint_signal = dataCheckPoint_signal
         self.progress_signal = progress_signal
         self.text = text_list
-    def run(self):
-
+        self.close_signal = close_signal
         
+    def run(self):
+        self.close_signal.emit(False)
         for step, data in enumerate(self.text):
             total_steps = len(self.text)
             self.dataCheckPoint = False
             self.received_data = []
-            print("문자열 변환 : ", time.strftime("%H:%M:%S", time.gmtime(now)))
             self.input_Value_signal.emit(data)
             self.dataCheckPoint_signal.emit(self.dataCheckPoint)
             encode_data = data.encode()
             self.ser.write(encode_data)
             # 아래의 값은 serial의 스레드가 데이터를 읽는 시간 * 9 는 되어야함
-            time.sleep(1)
+            time.sleep(0.12)
             progress_percentage = int((step + 1) / total_steps * 100)
             self.progress_signal.emit(progress_percentage)
-
-
-
+        self.close_signal.emit(True)
+            
 class WindowClass(QMainWindow, form_class):
     input_Value_signal = pyqtSignal(str)
     dataCheckPoint_signal = pyqtSignal(bool)
     # Home Tab의 데이터 프레임 A~E에서의 프로그레스 시그널
     progress_signal = pyqtSignal(int)
-    
+    close_signal = pyqtSignal(bool)
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -73,7 +73,7 @@ class WindowClass(QMainWindow, form_class):
         self.dataCheckPoint_signal.connect(self.updateDataCheckPoint)
         self.progress_signal.connect(self.updateProgressBar)
         self.received_data = []
-        
+        self.close_signal.connect(self.updateCloseValue)
         
         # 시스템 테이블 column 헤더와 row 헤더 안보이도록 설정
         self.SystemTable.horizontalHeader().setVisible(False)
@@ -105,7 +105,11 @@ class WindowClass(QMainWindow, form_class):
         self.openBtn.setEnabled(True)
         self.openBtn.clicked.connect(self.openPort)
         
+        self.counter = 0
         self.closeBtn.clicked.connect(self.closePort)
+
+        # CSV로 저장하는 버튼
+        self.toCsvBtn.clicked.connect(self.toCsvBtn_Push)
         # -------------------------------------------Home TAB ---------------------------------------------------------------------------------
 
         # ---------------------------------------------------------- Moudle Tab 부분 ---------------------------------------------------------
@@ -153,7 +157,11 @@ class WindowClass(QMainWindow, form_class):
 
     def updateDataCheckPoint(self, datacheckPoint):
         self.dataCheckPoint = datacheckPoint
-
+    def updateCloseValue(self, value):
+        if value == True:
+            self.closeBtn.setEnabled(value)
+        elif value == False:
+            self.closeBtn.setEnabled(value)
     def openPort(self):
         # 시리얼 통신을 위한 콤보박스 지정하는 것을 저장
         self.inputBtn.setEnabled(True)
@@ -166,14 +174,23 @@ class WindowClass(QMainWindow, form_class):
         selected_StopBit = self.StopBitCBox.currentText()
            
         # 시리얼 통신 시작
-        self.ser = serial.Serial(port = selected_Port, baudrate = int(selected_BaudRate), stopbits= int(selected_StopBit))
+        try:
+            self.ser = serial.Serial(port = selected_Port, baudrate = int(selected_BaudRate), stopbits= int(selected_StopBit))
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            notification = QMessageBox(self)
+            notification.setWindowTitle("알림 메세지")
+            notification.setText("지정된 포트를 찾을 수 없습니다.")
+            notification.setIcon(QMessageBox.Information)
+            notification.exec_()
+            return
 
         def readthread():
             while True:
                 
                 if self.ser and self.ser.readable():
                     try:
-                        res = self.ser.read(8)
+                        res = self.ser.read(56)
 
                         hex_representation = ' '.join([format(byte, '02X') for byte in res])
                         print(hex_representation)
@@ -182,8 +199,13 @@ class WindowClass(QMainWindow, form_class):
                             self.received_data.append(buffer[i])
                         
                         # 8byte를 읽고나서 8바이트 미만의 나머지 바이트를 읽어들이는 코드
-                        time.sleep(0.05)
-                        if self.ser.in_waiting < 8:
+                        
+                        time.sleep(0.03)
+                        # 56Byte를 한 번에 읽어 들이므로
+                        # 144 -> 88 - > 32 이 경우는 최소 0.09 안으로 수행
+                        # 72 -> 16 -> 이 경우는 최소 0.06초 안으로 수행
+                        print(self.ser.in_waiting)
+                        if self.ser.in_waiting <= self.ByteLength:
                             res = self.ser.read(self.ser.in_waiting) 
                             hex_representation = ' '.join([format(byte, '02X') for byte in res])
                             print(hex_representation)
@@ -205,6 +227,7 @@ class WindowClass(QMainWindow, form_class):
                     print("시리얼 포트가 열려 있지 않거나 읽을 수 없습니다.")
                     time.sleep(1)  # Set appropriate sleep time as needed
         if not self.ser.is_open:
+
             return    
 
         thread = threading.Thread(target=readthread)
@@ -219,6 +242,14 @@ class WindowClass(QMainWindow, form_class):
         print(self.ser.is_open)
         if hasattr(self, 'ser') and self.ser and self.ser.is_open:
             self.ser.close()
+            if not self.ser.is_open:
+                # 만약 여기서 스레드가 동작중이라면
+                if self.simulate_timer.isActive():
+                    print("Stopping simulate_timer.")
+                    self.simulate_timer.stop()
+                if self.simulate_timer2.isActive():
+                    print("Stopping simulate_timer2.")
+                    self.simulate_timer2.stop()    
             print("Serial port closed.")
             print(self.ser.is_open)
             self.openBtn.setEnabled(True)
@@ -260,24 +291,25 @@ class WindowClass(QMainWindow, form_class):
         for row in range(0, self.dianostic_table.rowCount()):
             self.dianostic_table.takeItem(row, 1)
         self.text_list = ['A', 'B', 'C', 'D', 'E']
-        periodicTaksThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list)
-        periodicTaksThread.start()
+        self.periodicTaksThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list, self.close_signal)
+        self.periodicTaksThread.start()
 
         # self.period_pbar_Timer = QTimer(self)
         # self.period_pbar_Timer.timeout.connect()
         # self.period_pbar_Timer.start(200)  
-        
+
     def inputBtn_Push(self):
+        self.ByteLength = 65
         #데이터 체크포인트 설정
         self.dataCheckPoint = False
         # 입력된 주기
-        interval = int(self.lineEdit_Interval.text())
+        interval = float(self.lineEdit_Interval.text())
 
         # 주기가 0.1 * 9 * 6 미만으로는 안됨. 약 6초이하로는 설정 안되도록 하고 종료시킴
-        if interval < 8:
+        if interval < 1:
             notification = QMessageBox(self)
             notification.setWindowTitle("알림 메세지")
-            notification.setText("8초 미만으로는 Interval을 설정할 수 없습니다.")
+            notification.setText("1초 미만으로는 Interval을 설정할 수 없습니다.")
             notification.setIcon(QMessageBox.Information)
             notification.exec_()
             return
@@ -334,7 +366,8 @@ class WindowClass(QMainWindow, form_class):
 
                 Vmodule_H = int(self.received_data[(i*12) + 1], 16)
                 Vmodule_L = int(self.received_data[(i*12) + 2], 16)
-                Voltage = round(float(Vmodule_H *256 + Vmodule_L) * 0.1, 2) 
+                Voltage = "{:.3f}".format(round(float(Vmodule_H *256 + Vmodule_L) * 0.1, 3))
+                print(Voltage) 
                 temp_list.append(str(Voltage) + " " + "V")
                 
                 
@@ -346,19 +379,23 @@ class WindowClass(QMainWindow, form_class):
 
                 Vcell_max_H = int(self.received_data[(i*12) + 3], 16)
                 Vcell_max_L = int(self.received_data[(i*12) + 4], 16)
-                max_Cell = round(float(Vcell_max_H *256 + Vcell_max_L) * 0.001, 3)
+                max_Cell = "{:.3f}".format(round(float(Vcell_max_H *256 + Vcell_max_L) * 0.001, 3))
                 temp_list.append(str(max_Cell) + " "+ "V")            
-
+                print(max_Cell)
                 Vcell_min_H = int(self.received_data[(i*12) + 5], 16)
                 Vcell_min_L = int(self.received_data[(i*12) + 6], 16)
-                min_Cell = round(float(Vcell_min_H * 256 + Vcell_min_L) * 0.001, 3)
+                min_Cell = "{:.3f}".format(round(float(Vcell_min_H * 256 + Vcell_min_L) * 0.001, 3))
                 temp_list.append(str(min_Cell) + " " + "V")
-                Diff_V = round(abs(max_Cell - min_Cell), 3)
+                print(min_Cell)
+                Diff_V = "{:.3f}".format(round(abs(float(max_Cell) - float(min_Cell)), 3))
                 temp_list.append(str(Diff_V) + " " + "V")
+                print(Diff_V)
                 max_T = int(self.received_data[(i*12) + 7], 16) - 50
                 min_T = int(self.received_data[(i*12) + 8], 16) - 50
                 temp_list.append(str(max_T) + " " + chr(176) + "C")
+                print(max_T)
                 temp_list.append(str(min_T) + " " + chr(176) + "C")
+                print(min_T)
                 diff_T = abs(max_T - min_T)
                 temp_list.append(str(diff_T) + " " + chr(176) + "C")
                 separated_LengthList_12.append(temp_list)
@@ -498,6 +535,34 @@ class WindowClass(QMainWindow, form_class):
             self.dianostic_table.setItem(11, 1, item)
         # 다시 초기화
         self.received_data = []
+    
+    def toCsvBtn_Push(self):
+        default_file_name = "DataFrame.csv"
+
+        # QFileDialog의 리턴 값이 총 2가지 있는데, 두 번째 _은 리턴하는 두번 째 값에 관심이 없어 _로 처리
+        # 첫번째 값 파일 경로 지정
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save CSV File", default_file_name, "CSV Files (*.csv)")
+
+        if file_path:
+            try:
+                # Open the file in write mode
+                with open(file_path, 'w', newline='',  encoding='utf-8') as csv_file:
+                    csv_writer = csv.writer(csv_file)
+
+                    # 리스트 컨프리헨션으로 헤더 데이터 추출
+                    header_data = [self.df_table.horizontalHeaderItem(i).text() for i in range(self.df_table.columnCount())]
+                    csv_writer.writerow(header_data)
+
+                    # Write data
+                    for row in range(self.df_table.rowCount()):
+                        row_data = [self.df_table.item(row, col).text() for col in range(self.df_table.columnCount())]
+                        csv_writer.writerow(row_data)
+
+                print(f"Table data saved to {file_path}")
+
+            except Exception as e:
+                print(f"Error saving CSV file: {e}")
+    
     def updateModuleTab(self):
 
         STX = self.received_data[0]
@@ -546,26 +611,37 @@ class WindowClass(QMainWindow, form_class):
         Tcell_list.append(Tcell_min)
 
         # 값을 입력할 테이블 지정
-        current_tableWidget = getattr(self, f'Module_table_{Module_num}')
+        if 1 <= Module_num <= 5:
+            convertNum = 1
+        elif 6 <= Module_num <= 10:
+            convertNum = 2
+        elif 11 <= Module_num <= 15:
+            convertNum = 3
+        else:
+            convertNum = 4    
+        current_tableWidget = getattr(self, f'Module_table_{convertNum}')
         
-        print(Module_num)
+        print(convertNum)
         
         for row in range(0, len(Vcell_list)):
+
             item = QTableWidgetItem(str(Vcell_list[row]))
-            current_tableWidget.setItem(row, 0, item)
+            # 10을 %하는 이유는 Module_num이 [1,2,3,4,5]일때 2*Module_num - 2, 2*Module_num - 1 값이 0~9이고,
+            # Module_num이 [6,7,8,9,10]일때 2*Module_num - 2, 2*Module_num - 1 값이 10~19이기 때문에 10의 나머지를 해주면 0~9로 순환하기 때문이다.
+            current_tableWidget.setItem(row, (2*Module_num - 2) % 10, item)
 
             item2 = QTableWidgetItem(str(Tcell_list[row]))
-            current_tableWidget.setItem(row, 1, item2)
+            current_tableWidget.setItem(row, (2*Module_num - 1) % 10, item2)
 
         self.received_data = []
         
         print("self.recived 비우기 성공")
 
     def module_table_HeaderRemove(self):
-        for i in range(1, 21):
-            # 테이블 1번부터 20번까지 지정
+        for i in range(1, 5):
+            # 테이블 1번부터 4번까지 지정
             current_tableWidget = getattr(self, f'Module_table_{i}')
-            # 수직, 수평 헤더 안보이게 설정.
+            # 수평 헤더 안보이게 설정.
             current_tableWidget.horizontalHeader().setVisible(False)
             
     
@@ -658,14 +734,15 @@ class WindowClass(QMainWindow, form_class):
         self.horizontalLayout.addWidget(quickWidget3)
     # --------------------------------------------------Setting Tab 부분의 메서드
     def inputBtn2_Push(self):
-        interval = int(self.lineEdit_Interval_2.text())
+        self.ByteLength = 72
+        interval = float(self.lineEdit_Interval_2.text())
 
 
-        # 주기가 0.1 * 9 * 6 미만으로는 안됨. 약 6초이하로는 설정 안되도록 하고 종료시킴
-        if interval < 30 :
+        # 
+        if interval < 5 :
             notification = QMessageBox(self)
             notification.setWindowTitle("알림 메세지")
-            notification.setText("30초 미만으로는 Interval을 설정할 수 없습니다.")
+            notification.setText("5초 미만으로는 Interval을 설정할 수 없습니다.")
             notification.setIcon(QMessageBox.Information)
             notification.exec_()
             return
@@ -685,7 +762,7 @@ class WindowClass(QMainWindow, form_class):
         self.period_pbar.setValue(self.period_pbar_value)
         
         # 테이블들 비우기
-        for i in range(1, 21):
+        for i in range(1, 5):
             # 테이블 1번부터 20번까지 지정
             current_tableWidget = getattr(self, f'Module_table_{i}')
             # 테이블 비우기
@@ -693,7 +770,7 @@ class WindowClass(QMainWindow, form_class):
         # 
             
         self.text_list = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's']
-        periodicTaksThread2 = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list)
+        periodicTaksThread2 = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list, self.close_signal)
         periodicTaksThread2.start()
         
         # self.period_pbar_Timer = QTimer(self)
