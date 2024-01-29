@@ -7,13 +7,15 @@ from PyQt5.QtCore import Qt, QUrl, QObject, QTimer, QThread, pyqtSignal,  QSetti
 from PyQt5.QtGui import QColor
 from PyQt5.QtGui import QFont
 from datetime import datetime
+
 import time
 import os
 import serial
 import threading
 import time
 import csv
-now = time.time()
+
+
  
 
 if getattr(sys, 'frozen', False):
@@ -31,13 +33,12 @@ form_class = uic.loadUiType(ui_file_path)[0]
 
 class Thread1(QThread):
     #parent = MainWidget을 상속 받음.
-    def __init__(self, parent, ser, dataCheckPoint, input_Value_signal, dataCheckPoint_signal, progress_signal, text_list, close_signal):
+    def __init__(self, parent, ser, dataCheckPoint, input_Value_signal, dataCheckPoint_signal, text_list, close_signal):
         super().__init__(parent)
         self.ser = ser
         self.dataCheckPoint = dataCheckPoint
         self.input_Value_signal = input_Value_signal
         self.dataCheckPoint_signal = dataCheckPoint_signal
-        self.progress_signal = progress_signal
         self.text = text_list
         self.close_signal = close_signal
         
@@ -53,15 +54,12 @@ class Thread1(QThread):
             self.ser.write(encode_data)
             # 아래의 값은 serial의 스레드가 데이터를 읽는 시간 * 9 는 되어야함
             time.sleep(0.15)
-            progress_percentage = int((step + 1) / total_steps * 100)
-            self.progress_signal.emit(progress_percentage)
         self.close_signal.emit(True)
             
 class WindowClass(QMainWindow, form_class):
     input_Value_signal = pyqtSignal(str)
     dataCheckPoint_signal = pyqtSignal(bool)
     # Home Tab의 데이터 프레임 A~E에서의 프로그레스 시그널
-    progress_signal = pyqtSignal(int)
     close_signal = pyqtSignal(bool)
     def __init__(self):
         super().__init__()
@@ -72,7 +70,6 @@ class WindowClass(QMainWindow, form_class):
         self.resize(2000, 2000)
         self.input_Value_signal.connect(self.updateInputValue)
         self.dataCheckPoint_signal.connect(self.updateDataCheckPoint)
-        self.progress_signal.connect(self.updateProgressBar)
         self.received_data = []
         self.close_signal.connect(self.updateCloseValue)
         
@@ -95,9 +92,13 @@ class WindowClass(QMainWindow, form_class):
         self.load_settings() 
         # 주기적으로 버튼이 클릭되어 데이터가 나타나도록 함.
         self.simulate_timer = QTimer(self)
-        self.period = 15000
+        self.period = None
         # 주기적으로 작동되는 태스크를 설정
         self.simulate_timer.timeout.connect(self.startPeriodicTask)
+        # 태스크 안에서 프로그레스바가 차오르도록 설정
+        self.progressTimer = QTimer()
+        self.progressTimer.timeout.connect(self.updateProgressBar)
+
         # 버튼 눌렀을 때의 시그널 설정
         self.inputBtn.setEnabled(False)
         self.inputBtn.clicked.connect(self.inputBtn_Push)
@@ -126,7 +127,7 @@ class WindowClass(QMainWindow, form_class):
 
         # ---------------------------------------------------------- Setting Tab 부분 ---------------------------------------------------------
         self.inputBtn2.clicked.connect(self.inputBtn2_Push)
-        self.inputBtn2_period = 30000
+        
         self.simulate_timer2 = QTimer()
         self.simulate_timer2.timeout.connect(self.startPeriodicTask2)
 
@@ -288,8 +289,17 @@ class WindowClass(QMainWindow, form_class):
         return item
 
     def startPeriodicTask(self):
-        self.period_pbar_value = 0
-        self.period_pbar.setValue(self.period_pbar_value)
+        # 프로그레스 타이머 설정
+        # self.progressTimer = QTimer()
+        # self.progressTimer.timeout.connect(self.updateProgressBar)
+        self.elapsed_time = 0
+        self.total_time = self.period
+        self.period_pbar.setValue(0)
+
+        self.progressTimer.start(100)    
+        
+
+
         
         # 테이블들 비우기
         self.df_table.clearContents()
@@ -300,7 +310,7 @@ class WindowClass(QMainWindow, form_class):
         for row in range(0, self.dianostic_table.rowCount()):
             self.dianostic_table.takeItem(row, 1)
         self.text_list = ['A', 'B', 'C', 'D', 'E']
-        self.periodicTaksThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list, self.close_signal)
+        self.periodicTaksThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.text_list, self.close_signal)
         self.periodicTaksThread.start()
 
         # self.period_pbar_Timer = QTimer(self)
@@ -341,16 +351,34 @@ class WindowClass(QMainWindow, form_class):
         if self.simulate_timer.isActive():
             print("Stopping simulate_timer.")
             self.simulate_timer.stop()
-    
+
+            self.update_time(self.timeLabel)
+
     def Interval_Cancel_Btn_Push_2(self):
         if self.simulate_timer2.isActive():
             print("Stopping simulate_timer2.")
             self.simulate_timer2.stop()
 
+            self.update_time(self.timeLabel_2)
 
-    def updateProgressBar(self, value):
-        self.period_pbar_value = value
-        self.period_pbar.setValue(self.period_pbar_value)
+    def update_time(self, timeLabel):        
+        now = datetime.now()
+        updatedTime = f'저장 시간 : ' + now.strftime('%Y-%m-%d %H:%M:%S') 
+        timeLabel.setText(updatedTime)
+    
+    
+
+
+    def updateProgressBar(self):
+        # 경과된 시간 주기만큼 증가시키기
+        if self.total_time - self.elapsed_time <= 0:
+            return
+        self.elapsed_time += 110
+        progress = (self.elapsed_time / self.total_time) * 100
+        self.period_pbar.setValue(min(progress, 100))
+
+        
+        
 
     
             
@@ -789,7 +817,7 @@ class WindowClass(QMainWindow, form_class):
         
             
         self.text_list = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's']
-        periodicTaksThread2 = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list, self.close_signal)
+        periodicTaksThread2 = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.text_list, self.close_signal)
         periodicTaksThread2.start()
         
         # self.period_pbar_Timer = QTimer(self)
