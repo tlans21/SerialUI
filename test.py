@@ -33,17 +33,26 @@ form_class = uic.loadUiType(ui_file_path)[0]
 
 class Thread1(QThread):
     #parent = MainWidget을 상속 받음.
-    def __init__(self, parent, ser, dataCheckPoint, input_Value_signal, dataCheckPoint_signal, text_list, close_signal):
+    def __init__(self, parent, ser, dataCheckPoint, input_Value_signal, dataCheckPoint_signal, progress_signal, text_list, close_signal, record_flag, time_record, record_signal):
         super().__init__(parent)
         self.ser = ser
         self.dataCheckPoint = dataCheckPoint
         self.input_Value_signal = input_Value_signal
         self.dataCheckPoint_signal = dataCheckPoint_signal
+        self.progress_signal = progress_signal
+        self.record_signal = record_signal
         self.text = text_list
         self.close_signal = close_signal
-        
+        self.record_flag = record_flag
+        self.time_record = time_record
     def run(self):
         self.close_signal.emit(False)
+        # 데이터 추출 시작
+        if self.record_flag == True:
+            current_time = datetime.now()
+            parser_current_time = current_time.strftime("%Y년%m월%d일_%H시%M분%S초")
+            self.time_record.append(parser_current_time)
+
         for step, data in enumerate(self.text):
             total_steps = len(self.text)
             self.dataCheckPoint = False
@@ -54,13 +63,18 @@ class Thread1(QThread):
             self.ser.write(encode_data)
             # 아래의 값은 serial의 스레드가 데이터를 읽는 시간 * 9 는 되어야함
             time.sleep(0.15)
+            progress_percentage = int((step + 1) / total_steps * 100)
+            self.progress_signal.emit(progress_percentage)
+        self.record_signal.emit(self.time_record)
         self.close_signal.emit(True)
             
 class WindowClass(QMainWindow, form_class):
     input_Value_signal = pyqtSignal(str)
     dataCheckPoint_signal = pyqtSignal(bool)
     # Home Tab의 데이터 프레임 A~E에서의 프로그레스 시그널
+    progress_signal = pyqtSignal(int)
     close_signal = pyqtSignal(bool)
+    record_signal = pyqtSignal(list)
     def __init__(self):
         super().__init__()
         self.setupUi(self)
@@ -70,9 +84,10 @@ class WindowClass(QMainWindow, form_class):
         self.resize(2000, 2000)
         self.input_Value_signal.connect(self.updateInputValue)
         self.dataCheckPoint_signal.connect(self.updateDataCheckPoint)
+        self.progress_signal.connect(self.updateProgressBar)
         self.received_data = []
         self.close_signal.connect(self.updateCloseValue)
-        
+        self.record_signal.connect(self.updateRecordTime)
         # 시스템 테이블 column 헤더와 row 헤더 안보이도록 설정
         self.SystemTable.horizontalHeader().setVisible(False)
         self.SystemTable.verticalHeader().setVisible(False)
@@ -92,13 +107,9 @@ class WindowClass(QMainWindow, form_class):
         self.load_settings() 
         # 주기적으로 버튼이 클릭되어 데이터가 나타나도록 함.
         self.simulate_timer = QTimer(self)
-        self.period = None
+        self.period = 15000
         # 주기적으로 작동되는 태스크를 설정
         self.simulate_timer.timeout.connect(self.startPeriodicTask)
-        # 태스크 안에서 프로그레스바가 차오르도록 설정
-        self.progressTimer = QTimer()
-        self.progressTimer.timeout.connect(self.updateProgressBar)
-
         # 버튼 눌렀을 때의 시그널 설정
         self.inputBtn.setEnabled(False)
         self.inputBtn.clicked.connect(self.inputBtn_Push)
@@ -110,12 +121,28 @@ class WindowClass(QMainWindow, form_class):
         self.counter = 0
         self.closeBtn.clicked.connect(self.closePort)
 
+        # CSV 저장 버튼 디폴트 값은 Fasle
+        self.toCsvBtn.setEnabled(False)
         # CSV로 저장하는 버튼
         self.toCsvBtn.clicked.connect(self.toCsvBtn_Push)
 
         # Interval Cancel 버튼
         self.Interval_Cancel_Btn.clicked.connect((self.Interval_Cancel_Btn_Push))
         self.Interval_Cancel_Btn_2.clicked.connect((self.Interval_Cancel_Btn_Push_2))
+        # Interval Cancel 버튼 디폴트 값 Fasle
+        self.Interval_Cancel_Btn.setEnabled(False)
+
+        # record_flag 초기값은 False로 데이터를 리스트에 넣지 않을 것을 의미.
+        self.record_flag = False 
+        # record start 버튼
+        self.recordStart_Btn.setEnabled(False)
+        self.recordStart_Btn.clicked.connect(self.recordStart_btn_push)
+        self.time_record = []
+
+        # record Finish 버튼
+        self.recordFinish_Btn.clicked.connect(self.recordFinish_btn_push)
+        # record Finish 버튼 디폴트값 False
+        self.recordFinish_Btn.setEnabled(False)
         # -------------------------------------------Home TAB ---------------------------------------------------------------------------------
 
         # ---------------------------------------------------------- Moudle Tab 부분 ---------------------------------------------------------
@@ -127,7 +154,7 @@ class WindowClass(QMainWindow, form_class):
 
         # ---------------------------------------------------------- Setting Tab 부분 ---------------------------------------------------------
         self.inputBtn2.clicked.connect(self.inputBtn2_Push)
-        
+        self.inputBtn2_period = 30000
         self.simulate_timer2 = QTimer()
         self.simulate_timer2.timeout.connect(self.startPeriodicTask2)
 
@@ -156,22 +183,39 @@ class WindowClass(QMainWindow, form_class):
         settings = QSettings("test", "test1")
         settings.setValue(key, combo_box.currentIndex()) 
 
-
+    def updateRecordTime(self, record):
+        self.time_record = record
 
     def updateInputValue(self, value):
         self.input_Value = value
 
     def updateDataCheckPoint(self, datacheckPoint):
         self.dataCheckPoint = datacheckPoint
+        
     def updateCloseValue(self, value):
+        # 데이터가 흐르는 것을 마쳤을 때, True 아니면 False
         if value == True:
+            # 데이터가 전부다 흘렀을 때 포트 닫기 버튼 활성화
             self.closeBtn.setEnabled(value)
+            # 인터벌 중지버튼 활성화
             self.Interval_Cancel_Btn.setEnabled(value)
             self.Interval_Cancel_Btn_2.setEnabled(value)
+            
+            # 데이터가 흐르는것을 마쳤을때 + 데이터 기록 start 버튼 누르지 않은 경우
+            if self.record_flag == False:
+                self.recordStart_Btn.setEnabled(True)
+            # 데이터가 흐르는것을 마쳤을때 + 데이터 기록 start 버튼 누른 경우
+            elif self.record_flag == True:
+                self.recordStart_Btn.setEnabled(False)
+
         elif value == False:
+            # 흐르는 동안에는 포트 닫기 버튼 비활성화
             self.closeBtn.setEnabled(value)
+            # 인터벌 중지버튼 비활성화
             self.Interval_Cancel_Btn.setEnabled(value)
             self.Interval_Cancel_Btn_2.setEnabled(value)
+            # record start 버튼 비활성화
+            self.recordStart_Btn.setEnabled(value)
     def openPort(self):
         # 시리얼 통신을 위한 콤보박스 지정하는 것을 저장
         self.inputBtn.setEnabled(True)
@@ -247,9 +291,7 @@ class WindowClass(QMainWindow, form_class):
         self.openBtn.setEnabled(False)
         
     def closePort(self):
-        print(self.ser)
-        print(hasattr(self, 'ser'))
-        print(self.ser.is_open)
+        
         if hasattr(self, 'ser') and self.ser and self.ser.is_open:
             self.ser.close()
             if not self.ser.is_open:
@@ -265,6 +307,12 @@ class WindowClass(QMainWindow, form_class):
             self.openBtn.setEnabled(True)
             # 포트를 닫았으므로 입력 버튼 비활성화
             self.inputBtn.setEnabled(False)
+            # 포트를 닫았으므로 Record Start 버튼 비활성화
+            self.recordStart_Btn.setEnabled(False)
+            # 포트를 닫았으므로 Record Finish 버튼 비활성화
+            self.recordFinish_Btn.setEnabled(False)
+            # 포트를 닫았으므로 Interval 중지 버튼 비활성화
+            self.Interval_Cancel_Btn.setEnabled(False)
         else:
             print("Serial port is not open.")
             self.openBtn.setEnabled(True)
@@ -289,17 +337,14 @@ class WindowClass(QMainWindow, form_class):
         return item
 
     def startPeriodicTask(self):
-        # 프로그레스 타이머 설정
-        # self.progressTimer = QTimer()
-        # self.progressTimer.timeout.connect(self.updateProgressBar)
-        self.elapsed_time = 0
-        self.total_time = self.period
-        self.period_pbar.setValue(0)
 
-        self.progressTimer.start(100)    
-        
+         # 이전 스레드가 실행 중인 경우 종료합니다.
+        if hasattr(self, 'periodicTaksThread') and self.periodicTaksThread is not None:
+            self.periodicTaskThread.terminate()
+            self.periodicTaskThread.wait()  # 스레드가 종료될 때까지 기다립니다.
 
-
+        self.period_pbar_value = 0
+        self.period_pbar.setValue(self.period_pbar_value)
         
         # 테이블들 비우기
         self.df_table.clearContents()
@@ -310,8 +355,9 @@ class WindowClass(QMainWindow, form_class):
         for row in range(0, self.dianostic_table.rowCount()):
             self.dianostic_table.takeItem(row, 1)
         self.text_list = ['A', 'B', 'C', 'D', 'E']
-        self.periodicTaksThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.text_list, self.close_signal)
-        self.periodicTaksThread.start()
+        print('타임레코드 : ', self.time_record)
+        self.periodicTaskThread = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list, self.close_signal, self.record_flag, self.time_record, self.record_signal)
+        self.periodicTaskThread.start()
 
         # self.period_pbar_Timer = QTimer(self)
         # self.period_pbar_Timer.timeout.connect()
@@ -343,7 +389,7 @@ class WindowClass(QMainWindow, form_class):
 
         # 주기적인 작업을 시작합니다.
         self.startPeriodicTask()
-
+        self.time_record = []
         # 주기적으로 버튼을 클릭하는 것을 시뮬레이션하기 위해 QTimer를 사용합니다.
         self.simulate_timer.start(int(self.period)) # 10000 period
     
@@ -351,15 +397,56 @@ class WindowClass(QMainWindow, form_class):
         if self.simulate_timer.isActive():
             print("Stopping simulate_timer.")
             self.simulate_timer.stop()
-
+            self.Interval_Cancel_Btn.setText("Interval 재시작")
             self.update_time(self.timeLabel)
+        else:
+            # 비활성화되었을 때, 다시 시작할 수 있도록
+            print("Starting simulate_timer.")
+            self.Interval_Cancel_Btn.setText("Interval 중지")
+            self.simulate_timer.start() 
 
     def Interval_Cancel_Btn_Push_2(self):
         if self.simulate_timer2.isActive():
             print("Stopping simulate_timer2.")
             self.simulate_timer2.stop()
-
+            
             self.update_time(self.timeLabel_2)
+        else:
+            # 비활성화되었을 때, 다시 시작할 수 있도록
+            print("Starting simulate_timer.")
+            self.simulate_timer.start()
+    
+    def recordStart_btn_push(self):
+        # recordStart_btn 비활성화
+        self.recordStart_Btn.setEnabled(False)
+        # 데이터를 읽는 스레드에 시간을 담으라고 Flag를 True 해준다. True는 담기 시작하라는 의미, False는 그만 담으라는 의미이다.
+        self.record_flag = True
+
+        # recordFinish 버튼이 디폴트값으로 False이고 버튼을 눌렀으므로 RecordFinish 버튼 True
+        self.recordFinish_Btn.setEnabled(True)
+        self.df_record = []
+   
+    def recordFinish_btn_push(self):
+        # 데이터 흐름을 멈춰야함, 반복 중지
+        if self.simulate_timer.isActive():
+            print("Stopping simulate_timer, recording stop")
+            self.simulate_timer.stop()
+
+        # 데이터 기록을 마쳤으므로 담지 말라고 Flag를 False 해준다.
+        self.record_flag = False
+        # 기록을 완료했으므로, csv버튼 활성화
+        self.toCsvBtn.setEnabled(True)
+        self.recordFinish_Btn.setEnabled(False)
+        self.Interval_Cancel_Btn.setEnabled(False)
+        
+        
+
+        
+
+        
+            
+        
+        
 
     def update_time(self, timeLabel):        
         now = datetime.now()
@@ -369,16 +456,9 @@ class WindowClass(QMainWindow, form_class):
     
 
 
-    def updateProgressBar(self):
-        # 경과된 시간 주기만큼 증가시키기
-        if self.total_time - self.elapsed_time <= 0:
-            return
-        self.elapsed_time += 110
-        progress = (self.elapsed_time / self.total_time) * 100
-        self.period_pbar.setValue(min(progress, 100))
-
-        
-        
+    def updateProgressBar(self, value):
+        self.period_pbar_value = value
+        self.period_pbar.setValue(self.period_pbar_value)
 
     
             
@@ -397,6 +477,7 @@ class WindowClass(QMainWindow, form_class):
 
 
     def updateHomeTab(self):
+    
         STX = self.received_data[0]
         return_cmd = self.received_data[1]
         rack_num = self.received_data[2]
@@ -617,6 +698,7 @@ class WindowClass(QMainWindow, form_class):
                 print(f"Error saving CSV file: {e}")
     
     def updateModuleTab(self):
+        
 
         STX = self.received_data[0]
         return_cmd = self.received_data[1]
@@ -807,6 +889,11 @@ class WindowClass(QMainWindow, form_class):
 
 
     def startPeriodicTask2(self):
+         # 이전 스레드가 실행 중인 경우 종료합니다.
+        if hasattr(self, 'periodicTaksThread') and self.periodicTaksThread is not None:
+            self.periodicTaskThread2.terminate()
+            self.periodicTaskThread2.wait()  # 스레드가 종료될 때까지 기다립니다.
+
         self.period_pbar_value = 0
         self.period_pbar.setValue(self.period_pbar_value)
         
@@ -817,8 +904,8 @@ class WindowClass(QMainWindow, form_class):
         
             
         self.text_list = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's']
-        periodicTaksThread2 = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.text_list, self.close_signal)
-        periodicTaksThread2.start()
+        periodicTaskThread2 = Thread1(self, self.ser, self.dataCheckPoint, self.input_Value_signal, self.dataCheckPoint_signal, self.progress_signal, self.text_list, self.close_signal, self.record_flag, self.time_record, self.record_signal)
+        periodicTaskThread2.start()
         
         # self.period_pbar_Timer = QTimer(self)
         # self.period_pbar_Timer.timeout.connect()

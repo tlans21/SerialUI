@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1904</width>
-    <height>1015</height>
+    <width>1898</width>
+    <height>1013</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -71,7 +71,7 @@ QTabBar::tab{
        <property name="geometry">
         <rect>
          <x>0</x>
-         <y>0</y>
+         <y>-191</y>
          <width>2522</width>
          <height>1822</height>
         </rect>
@@ -385,7 +385,7 @@ QTabBar::tab{
                 <rect>
                  <x>280</x>
                  <y>350</y>
-                 <width>1051</width>
+                 <width>1041</width>
                  <height>741</height>
                 </rect>
                </property>
@@ -827,9 +827,9 @@ QTabBar::tab{
               <widget class="QPushButton" name="toCsvBtn">
                <property name="geometry">
                 <rect>
-                 <x>1040</x>
-                 <y>310</y>
-                 <width>121</width>
+                 <x>1510</x>
+                 <y>520</y>
+                 <width>91</width>
                  <height>28</height>
                 </rect>
                </property>
@@ -840,9 +840,9 @@ QTabBar::tab{
               <widget class="QPushButton" name="Interval_Cancel_Btn">
                <property name="geometry">
                 <rect>
-                 <x>1180</x>
-                 <y>310</y>
-                 <width>93</width>
+                 <x>1340</x>
+                 <y>480</y>
+                 <width>91</width>
                  <height>28</height>
                 </rect>
                </property>
@@ -853,14 +853,14 @@ QTabBar::tab{
               <widget class="QLabel" name="timeLabel">
                <property name="geometry">
                 <rect>
-                 <x>760</x>
-                 <y>310</y>
-                 <width>241</width>
+                 <x>1330</x>
+                 <y>360</y>
+                 <width>211</width>
                  <height>20</height>
                 </rect>
                </property>
                <property name="text">
-                <string>저장 시간 : None</string>
+                <string>Interval 중지 시간 : None</string>
                </property>
               </widget>
               <widget class="QLabel" name="label_13">
@@ -881,6 +881,45 @@ QTabBar::tab{
                </property>
                <property name="text">
                 <string>System</string>
+               </property>
+              </widget>
+              <widget class="QLabel" name="csvFileSaveDateLabel">
+               <property name="geometry">
+                <rect>
+                 <x>1330</x>
+                 <y>390</y>
+                 <width>171</width>
+                 <height>16</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>CSV 저장일시 : None</string>
+               </property>
+              </widget>
+              <widget class="QPushButton" name="recordStart_Btn">
+               <property name="geometry">
+                <rect>
+                 <x>1340</x>
+                 <y>440</y>
+                 <width>93</width>
+                 <height>28</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>Record Start</string>
+               </property>
+              </widget>
+              <widget class="QPushButton" name="recordFinish_Btn">
+               <property name="geometry">
+                <rect>
+                 <x>1340</x>
+                 <y>520</y>
+                 <width>93</width>
+                 <height>28</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>Record finish</string>
                </property>
               </widget>
              </widget>
