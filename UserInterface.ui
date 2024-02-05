@@ -71,7 +71,7 @@ QTabBar::tab{
        <property name="geometry">
         <rect>
          <x>0</x>
-         <y>-191</y>
+         <y>0</y>
          <width>2522</width>
          <height>1822</height>
         </rect>
@@ -370,9 +370,9 @@ QTabBar::tab{
               <widget class="QPushButton" name="inputBtn">
                <property name="geometry">
                 <rect>
-                 <x>560</x>
+                 <x>1090</x>
                  <y>300</y>
-                 <width>93</width>
+                 <width>91</width>
                  <height>31</height>
                 </rect>
                </property>
@@ -804,7 +804,7 @@ QTabBar::tab{
               <widget class="QLabel" name="label_7">
                <property name="geometry">
                 <rect>
-                 <x>450</x>
+                 <x>980</x>
                  <y>290</y>
                  <width>91</width>
                  <height>16</height>
@@ -817,7 +817,7 @@ QTabBar::tab{
               <widget class="QLineEdit" name="lineEdit_Interval">
                <property name="geometry">
                 <rect>
-                 <x>430</x>
+                 <x>970</x>
                  <y>310</y>
                  <width>113</width>
                  <height>21</height>
@@ -827,7 +827,7 @@ QTabBar::tab{
               <widget class="QPushButton" name="toCsvBtn">
                <property name="geometry">
                 <rect>
-                 <x>1510</x>
+                 <x>1340</x>
                  <y>520</y>
                  <width>91</width>
                  <height>28</height>
@@ -840,10 +840,10 @@ QTabBar::tab{
               <widget class="QPushButton" name="Interval_Cancel_Btn">
                <property name="geometry">
                 <rect>
-                 <x>1340</x>
-                 <y>480</y>
+                 <x>1200</x>
+                 <y>300</y>
                  <width>91</width>
-                 <height>28</height>
+                 <height>31</height>
                 </rect>
                </property>
                <property name="text">
@@ -888,7 +888,7 @@ QTabBar::tab{
                 <rect>
                  <x>1330</x>
                  <y>390</y>
-                 <width>171</width>
+                 <width>271</width>
                  <height>16</height>
                 </rect>
                </property>
@@ -913,13 +913,39 @@ QTabBar::tab{
                <property name="geometry">
                 <rect>
                  <x>1340</x>
-                 <y>520</y>
-                 <width>93</width>
+                 <y>480</y>
+                 <width>101</width>
                  <height>28</height>
                 </rect>
                </property>
                <property name="text">
-                <string>Record finish</string>
+                <string>Record Finish</string>
+               </property>
+              </widget>
+              <widget class="QLabel" name="recordDataLengthLabel">
+               <property name="geometry">
+                <rect>
+                 <x>1340</x>
+                 <y>570</y>
+                 <width>221</width>
+                 <height>16</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>Record data count :</string>
+               </property>
+              </widget>
+              <widget class="QLabel" name="remainingTimeLabel">
+               <property name="geometry">
+                <rect>
+                 <x>680</x>
+                 <y>310</y>
+                 <width>261</width>
+                 <height>20</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>Time remaining until next cycle : 0sec</string>
                </property>
               </widget>
              </widget>
