@@ -102,6 +102,8 @@ class WindowClass(QMainWindow, form_class):
         self.period_pbar_value = 0
         self.period_pbar.setValue(self.period_pbar_value)
     
+        # Home 데이터 프레임의 저장 횟수 로드
+        self.save_HomeCount = self.load_settings_value("saveCount")
         self.load_settings() 
         # 주기적으로 버튼이 클릭되어 데이터가 나타나도록 함.
         self.simulate_timer = QTimer(self)
@@ -159,6 +161,13 @@ class WindowClass(QMainWindow, form_class):
         self.simulate_timer2.timeout.connect(self.startPeriodicTask2)
 
         # ---------------------------------------------------------- Setting Tab 부분 ---------------------------------------------------------
+
+    def load_settings_value(self, key):
+        settings = QSettings("test", "test1")
+        save_HomeCount = settings.value(key, 0, type=int)
+        print(save_HomeCount)
+        return save_HomeCount
+
     def load_settings_for_combo_box(self, key, combo_box):
         settings = QSettings("test", "test1")
         saved_index = settings.value(key, 0, type=int)
@@ -170,7 +179,7 @@ class WindowClass(QMainWindow, form_class):
         self.load_settings_for_combo_box("DataBitCBox", self.DataBitCBox)
         self.load_settings_for_combo_box("parityBitCBox", self.parityBitCBox)
         self.load_settings_for_combo_box("StopBitCBox", self.StopBitCBox)
-    
+        
     
     def save_settings(self):
         self.save_settings_for_combo_box("portCBox", self.portCBox)
@@ -179,9 +188,15 @@ class WindowClass(QMainWindow, form_class):
         self.save_settings_for_combo_box("parityBitCBox", self.parityBitCBox)
         self.save_settings_for_combo_box("StopBitCBox", self.StopBitCBox)
         
+
     def save_settings_for_combo_box(self, key, combo_box):
         settings = QSettings("test", "test1")
         settings.setValue(key, combo_box.currentIndex()) 
+    
+    def save_settings_value(self, key, value):
+        settings = QSettings("test", "test1")
+        settings.setValue(key, value)
+        
 
     def updateRecordTime(self, record):
         self.time_record = record
@@ -723,66 +738,124 @@ class WindowClass(QMainWindow, form_class):
                 if item is not None:
                     row_data.append(item.text())
                 else:
-                    row_data.append(" ") # 빈 셀
+                    row_data.append("a") # 빈 셀
             table_data.append(row_data)
         return table_data
     
     def toCsvBtn_Push(self):
-        default_file_name = "DataFrame2.csv"
+        # 현재 파일 위치를 지정
+        current_directory = os.getcwd()
 
-        # QFileDialog의 리턴 값이 총 2가지 있는데, 두 번째 _은 리턴하는 두번 째 값에 관심이 없어 _로 처리
-        # 첫번째 값 파일 경로 지정
-        file_path, _ = QFileDialog.getSaveFileName(self, "Save CSV File", default_file_name, "CSV Files (*.csv)")
-        print(self.dataTable_record)
+        base_filename = "Home_"
+        file_number = str(self.save_HomeCount).zfill(4)
+        file_name = f"{base_filename}{file_number}.csv"
 
-        if file_path:
-            try:
-                # Open the file in write mode
-                with open(file_path, 'w', newline='',  encoding='utf-16') as csv_file:
-                    csv_writer = csv.writer(csv_file)
-                    print("데이터 길이", len(self.dataTable_record))
-                    print("날짜 길이", len(self.time_record))
-                    #### -------- DataFrame table 저장 코드 -------------------------------####
-                    for cnt in range(len(self.dataTable_record)):
-                        # 날짜 
-                        header_date = ['date']
-                        # 리스트 컨프리헨션으로 헤더 데이터 추출
-                        header_data =  header_date + [self.df_table.horizontalHeaderItem(i).text() for i in range(self.df_table.columnCount())]
-                        csv_writer.writerow(header_data)
+        file_path = os.path.join(current_directory, file_name)
 
-                        # dataTable_record에 있는 df를 꺼내옴
-                        stored_df = self.dataTable_record[cnt]
-                        # Write data
-                        for row in range(self.df_table.rowCount()):
-                            
-                            row_dataFramedata = [stored_df[row][i] for i in range(len(stored_df[row]))]
-                            row_date = [self.time_record[cnt]]
-                            completeTable = row_date + row_dataFramedata
-                            csv_writer.writerow(completeTable)
-                    #### -------- DataFrame table 저장 코드 -------------------------------####
+        try:
+            # Open the file in write mode
+            with open(file_path, 'w', newline='',  encoding='ANSI') as csv_file:
+                csv_writer = csv.writer(csv_file)
+                print("데이터 길이", len(self.dataTable_record))
+                print("날짜 길이", len(self.time_record))
+                # -----------------------------------------수평 저장 코드 ----------------------------------------------#
+                # header_data = []
+                # for cnt in range(len(self.dataTable_record)):
+                #     # 날짜 
+                #     header_date = 'date'
+                #     header_data.append(header_date)
+                #     # 리스트 컨프리헨션으로 헤더 데이터 추출
+                #     for i in range(self.df_table.columnCount()):
+                #         header_df = self.df_table.horizontalHeaderItem(i).text()
+                #         print(header_df)
+                #         header_data.append(header_df)
                     
-                    #### -------- system 저장 코드 -------------------------------####
-                    for cnt in range(len(self.systemTable_record)):
-                        stored_systemTable = self.systemTable_record[cnt]
-                        for row in range(self.SystemTable.rowCount()):
-                            row_data = [stored_systemTable[row][i] for i in range(len(stored_systemTable[row]))]
-                            csv_writer.writerow(row_data) 
-                    #### -------- system 저장 코드 -------------------------------####
+                #     # self.systemTable_record[cnt] : self.systemTable의 rowCount를 뜻함.
+                #     stored_systemTable = self.systemTable_record[cnt]
                     
-                    #### -------- diansotic 저장 코드 -------------------------------####
-                    for cnt in range(len(self.dianosticTable_record)):
-                        stored_dianosticTable = self.dianosticTable_record[cnt]
-                        for row in range(self.dianostic_table.rowCount()):
-                            row_data = [stored_dianosticTable[row][i] for i in range(len(stored_dianosticTable[row]))]
-                            csv_writer.writerow(row_data)
-                    #### -------- diansotic 저장 코드 -------------------------------####
-                                 
-                print(f"Table data saved to {file_path}")
-                current_time = datetime.now()
-                parser_current_time = current_time.strftime("%Y년%m월%d일_%H시%M분%S초")
-                self.csvFileSaveDateLabel.setText(f'CSV 저장 일시: {parser_current_time}')
-            except Exception as e:
-                print(f"Error saving CSV file: {e}")
+                #     for i in range(0, 3):
+                #         header_systemTableData = stored_systemTable[i][0]
+                #         header_data.append(header_systemTableData)
+                # # 헤더 작성 
+                # csv_writer.writerow(header_data)
+                # # for cnt in range(len(self.dataTable_record)):
+                # #     # dataTable_record에 있는 df를 꺼내옴
+                # #     stored_df = self.dataTable_record[cnt]
+                # #     # Write data
+                # #     for row in range(self.df_table.rowCount()):
+                # #         row_date = self.time_record[cnt]
+                # #         row_complete.append(row_date)
+                # #         row_dataFrameData = [stored_df[row][i] for i in range(len(stored_df[row]))]
+                # #         row_complete.extend(row_dataFrameData)
+                # #         row_systemTableData = [stored_systemTable[row_storedSystemTable][1] for row_storedSystemTable in range(self.SystemTable.rowCount())] 
+                # #         row_complete.extend(row_systemTableData)
+                # for row in range(self.df_table.rowCount()):
+                #     row_complete = []
+                #     for cnt in range(len(self.dataTable_record)):
+                #         row_date = self.time_record[cnt]
+                #         row_complete.append(row_date)
+
+                #         stored_df = self.dataTable_record[cnt]
+                        
+                #         row_dataFrameData = [stored_df[row][i] for i in range(len(stored_df[row]))]
+                #         row_complete.extend(row_dataFrameData)
+                #         print(row_complete)
+
+                #         stored_systemTable = self.systemTable_record[cnt]
+                #         row_systemTableData = [stored_systemTable[row_storedSystemTable][1] for row_storedSystemTable in range(0, 3)] 
+                #         row_complete.extend(row_systemTableData)
+                #     csv_writer.writerow(row_complete)
+                # -----------------------------------------수평 저장 코드 ----------------------------------------------#
+                # -----------------------------------------수직 저장 코드 ----------------------------------------------#
+                
+                for cnt in range(len(self.dataTable_record)):
+                    # ------------------------------------- header -------------------------------------------#
+                    # 날짜 
+                    header_data = []
+                    header_date = 'date'
+                    header_data.append(header_date)
+                    # 리스트 컨프리헨션으로 헤더 데이터 추출
+                    for i in range(self.df_table.columnCount()):
+                        header_df = self.df_table.horizontalHeaderItem(i).text()
+                        print(header_df)
+                        header_data.append(header_df)
+                    
+                    # self.systemTable_record[cnt] : self.systemTable의 rowCount를 뜻함.
+                    stored_systemTable = self.systemTable_record[cnt]
+                    
+                    for i in range(0, 3):
+                        header_systemTableData = stored_systemTable[i][0]
+                        header_data.append(header_systemTableData)
+                    csv_writer.writerow(header_data)
+                    # ------------------------------------- header -------------------------------------------#
+
+                    # ------------------------------------- cell 저장 ----------------------------------------#
+                    # dataTable_record에 있는 df를 꺼내옴
+                    stored_df = self.dataTable_record[cnt]
+                    
+                    
+                    for row in range(self.df_table.rowCount()):
+                        row_complete = []
+                        row_date = self.time_record[cnt]
+                        row_complete.append(row_date)
+                        row_dataFrameData = [stored_df[row][i] for i in range(len(stored_df[row]))]
+                        row_complete.extend(row_dataFrameData)
+                        # row_storedSystemTable in range(0, 3)는 system Table의 행의 길이를 원하는 대로 조정해야함. vrack lrack soc만 필요하기 때문에 (0, 3)을 씀.
+                        row_systemTableData = [stored_systemTable[row_storedSystemTable][1] for row_storedSystemTable in range(0, 3)] 
+                        row_complete.extend(row_systemTableData)
+                        # 셀 값 write
+                        csv_writer.writerow(row_complete)
+                    # ------------------------------------- cell 저장 ----------------------------------------#
+                # -----------------------------------------수직 저장 코드 ----------------------------------------------#
+            print(f"Table data saved to {file_path}")
+            current_time = datetime.now()
+            parser_current_time = current_time.strftime("%Y년%m월%d일_%H시%M분%S초")
+            self.csvFileSaveDateLabel.setText(f'CSV 저장 일시: {parser_current_time}')
+            # 저장이 완료되었으므로 저장횟수 증가
+            self.save_HomeCount += 1
+            self.save_settings_value("saveCount", self.save_HomeCount)
+        except Exception as e:
+            print(f"Error saving CSV file: {e}")
     
     def updateModuleTab(self):
         
