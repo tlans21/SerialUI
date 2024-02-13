@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1898</width>
-    <height>1013</height>
+    <height>1014</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -948,6 +948,19 @@ QTabBar::tab{
                 <string>Time remaining until next cycle : 0sec</string>
                </property>
               </widget>
+              <widget class="QPushButton" name="recordResetBtn">
+               <property name="geometry">
+                <rect>
+                 <x>1340</x>
+                 <y>610</y>
+                 <width>93</width>
+                 <height>28</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>기록 초기화</string>
+               </property>
+              </widget>
              </widget>
              <widget class="QWidget" name="Rack_2">
               <property name="styleSheet">
@@ -1082,16 +1095,13 @@ QTabBar::tab{
         <widget class="QWidget" name="scrollAreaWidgetContents_4">
          <property name="geometry">
           <rect>
-           <x>0</x>
+           <x>-339</x>
            <y>0</y>
            <width>2522</width>
-           <height>1831</height>
+           <height>1822</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_7">
-          <item>
-           <layout class="QVBoxLayout" name="verticalLayout_11"/>
-          </item>
           <item>
            <widget class="QFrame" name="frame_3">
             <property name="minimumSize">
@@ -1181,7 +1191,7 @@ QTabBar::tab{
                  <property name="geometry">
                   <rect>
                    <x>0</x>
-                   <y>40</y>
+                   <y>90</y>
                    <width>1761</width>
                    <height>811</height>
                   </rect>
@@ -1208,11 +1218,20 @@ QScrollBar:horizontal {background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:
 QScrollBar:handle:horizontal {background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #6495ED, stop:1 #4169E1); border: 1px solid #6495ED;}
 QScrollBar:add-line:horizontal, QScrollBar:sub-line:horizontal {background: none;}</string>
                  </property>
+                 <property name="columnCount">
+                  <number>40</number>
+                 </property>
                  <attribute name="horizontalHeaderVisible">
                   <bool>false</bool>
                  </attribute>
                  <attribute name="horizontalHeaderDefaultSectionSize">
                   <number>43</number>
+                 </attribute>
+                 <attribute name="verticalHeaderDefaultSectionSize">
+                  <number>35</number>
+                 </attribute>
+                 <attribute name="verticalHeaderMinimumSectionSize">
+                  <number>30</number>
                  </attribute>
                  <row>
                   <property name="text">
@@ -1341,11 +1360,6 @@ QScrollBar:add-line:horizontal, QScrollBar:sub-line:horizontal {background: none
                  </column>
                  <column>
                   <property name="text">
-                   <string>Tcell</string>
-                  </property>
-                 </column>
-                 <column>
-                  <property name="text">
                    <string>Vcell</string>
                   </property>
                  </column>
@@ -1512,6 +1526,11 @@ QScrollBar:add-line:horizontal, QScrollBar:sub-line:horizontal {background: none
                  <column>
                   <property name="text">
                    <string>Tcell</string>
+                  </property>
+                 </column>
+                 <column>
+                  <property name="text">
+                   <string>Vcell</string>
                   </property>
                  </column>
                  <item row="0" column="0">
@@ -1523,8 +1542,8 @@ QScrollBar:add-line:horizontal, QScrollBar:sub-line:horizontal {background: none
                 <widget class="QPushButton" name="Interval_Cancel_Btn_2">
                  <property name="geometry">
                   <rect>
-                   <x>1170</x>
-                   <y>870</y>
+                   <x>1290</x>
+                   <y>20</y>
                    <width>93</width>
                    <height>28</height>
                   </rect>
@@ -1537,7 +1556,7 @@ QScrollBar:add-line:horizontal, QScrollBar:sub-line:horizontal {background: none
                  <property name="geometry">
                   <rect>
                    <x>30</x>
-                   <y>10</y>
+                   <y>60</y>
                    <width>1731</width>
                    <height>31</height>
                   </rect>
@@ -1646,17 +1665,147 @@ QScrollBar:add-line:horizontal, QScrollBar:sub-line:horizontal {background: none
                   </property>
                  </column>
                 </widget>
-                <widget class="QLabel" name="timeLabel_2">
+                <widget class="QPushButton" name="inputBtn2">
                  <property name="geometry">
                   <rect>
-                   <x>890</x>
-                   <y>870</y>
-                   <width>241</width>
+                   <x>1630</x>
+                   <y>20</y>
+                   <width>81</width>
+                   <height>31</height>
+                  </rect>
+                 </property>
+                 <property name="styleSheet">
+                  <string notr="true"/>
+                 </property>
+                 <property name="text">
+                  <string>입력</string>
+                 </property>
+                </widget>
+                <widget class="QLineEdit" name="lineEdit_Interval_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>1490</x>
+                   <y>30</y>
+                   <width>113</width>
+                   <height>21</height>
+                  </rect>
+                 </property>
+                </widget>
+                <widget class="QLabel" name="intervalLabel_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>1500</x>
+                   <y>10</y>
+                   <width>91</width>
+                   <height>16</height>
+                  </rect>
+                 </property>
+                 <property name="text">
+                  <string>Interval 설정</string>
+                 </property>
+                </widget>
+                <widget class="QLabel" name="remainingTimeLabel_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>600</x>
+                   <y>30</y>
+                   <width>261</width>
                    <height>20</height>
                   </rect>
                  </property>
                  <property name="text">
-                  <string>저장 시간 : None</string>
+                  <string>Time remaining until next cycle : 0sec</string>
+                 </property>
+                </widget>
+                <widget class="QPushButton" name="recordStart_Btn_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>1780</x>
+                   <y>160</y>
+                   <width>93</width>
+                   <height>28</height>
+                  </rect>
+                 </property>
+                 <property name="text">
+                  <string>Record Start</string>
+                 </property>
+                </widget>
+                <widget class="QPushButton" name="recordFinish_Btn_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>1780</x>
+                   <y>200</y>
+                   <width>101</width>
+                   <height>28</height>
+                  </rect>
+                 </property>
+                 <property name="text">
+                  <string>Record Finish</string>
+                 </property>
+                </widget>
+                <widget class="QPushButton" name="toCsvBtn_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>1780</x>
+                   <y>240</y>
+                   <width>91</width>
+                   <height>28</height>
+                  </rect>
+                 </property>
+                 <property name="text">
+                  <string>CSV로 저장</string>
+                 </property>
+                </widget>
+                <widget class="QLabel" name="recordDataLengthLabel_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>1780</x>
+                   <y>280</y>
+                   <width>221</width>
+                   <height>16</height>
+                  </rect>
+                 </property>
+                 <property name="text">
+                  <string>Record data count :</string>
+                 </property>
+                </widget>
+                <widget class="QLabel" name="timeLabel_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>1780</x>
+                   <y>100</y>
+                   <width>211</width>
+                   <height>20</height>
+                  </rect>
+                 </property>
+                 <property name="text">
+                  <string>Interval 중지 시간 : None</string>
+                 </property>
+                </widget>
+                <widget class="QLabel" name="csvFileSaveDateLabel_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>1780</x>
+                   <y>130</y>
+                   <width>271</width>
+                   <height>16</height>
+                  </rect>
+                 </property>
+                 <property name="text">
+                  <string>CSV 저장일시 : None</string>
+                 </property>
+                </widget>
+                <widget class="QPushButton" name="recordResetBtn_2">
+                 <property name="geometry">
+                  <rect>
+                   <x>1780</x>
+                   <y>310</y>
+                   <width>93</width>
+                   <height>28</height>
+                  </rect>
+                 </property>
+                 <property name="text">
+                  <string>기록 초기화</string>
                  </property>
                 </widget>
                </widget>
@@ -1680,45 +1829,6 @@ QScrollBar:add-line:horizontal, QScrollBar:sub-line:horizontal {background: none
      <attribute name="title">
       <string>Setting</string>
      </attribute>
-     <widget class="QPushButton" name="inputBtn2">
-      <property name="geometry">
-       <rect>
-        <x>10</x>
-        <y>20</y>
-        <width>161</width>
-        <height>71</height>
-       </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true"/>
-      </property>
-      <property name="text">
-       <string>Data Frame a ~ b</string>
-      </property>
-     </widget>
-     <widget class="QLineEdit" name="lineEdit_Interval_2">
-      <property name="geometry">
-       <rect>
-        <x>190</x>
-        <y>40</y>
-        <width>113</width>
-        <height>21</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QLabel" name="label_8">
-      <property name="geometry">
-       <rect>
-        <x>200</x>
-        <y>10</y>
-        <width>91</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Interval 설정</string>
-      </property>
-     </widget>
     </widget>
    </widget>
    <widget class="QProgressBar" name="period_pbar">
