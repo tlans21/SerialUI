@@ -49,7 +49,7 @@ QTabBar::tab{
 </string>
     </property>
     <property name="currentIndex">
-     <number>0</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="Home">
      <attribute name="title">
@@ -824,19 +824,6 @@ QTabBar::tab{
                 </rect>
                </property>
               </widget>
-              <widget class="QPushButton" name="toCsvBtn">
-               <property name="geometry">
-                <rect>
-                 <x>1340</x>
-                 <y>520</y>
-                 <width>91</width>
-                 <height>28</height>
-                </rect>
-               </property>
-               <property name="text">
-                <string>CSV로 저장</string>
-               </property>
-              </widget>
               <widget class="QPushButton" name="Interval_Cancel_Btn">
                <property name="geometry">
                 <rect>
@@ -926,7 +913,7 @@ QTabBar::tab{
                <property name="geometry">
                 <rect>
                  <x>1340</x>
-                 <y>570</y>
+                 <y>520</y>
                  <width>221</width>
                  <height>16</height>
                 </rect>
@@ -946,19 +933,6 @@ QTabBar::tab{
                </property>
                <property name="text">
                 <string>Time remaining until next cycle : 0sec</string>
-               </property>
-              </widget>
-              <widget class="QPushButton" name="recordResetBtn">
-               <property name="geometry">
-                <rect>
-                 <x>1340</x>
-                 <y>610</y>
-                 <width>93</width>
-                 <height>28</height>
-                </rect>
-               </property>
-               <property name="text">
-                <string>기록 초기화</string>
                </property>
               </widget>
              </widget>
@@ -1095,7 +1069,7 @@ QTabBar::tab{
         <widget class="QWidget" name="scrollAreaWidgetContents_4">
          <property name="geometry">
           <rect>
-           <x>-339</x>
+           <x>-618</x>
            <y>0</y>
            <width>2522</width>
            <height>1822</height>
@@ -1743,24 +1717,11 @@ QScrollBar:add-line:horizontal, QScrollBar:sub-line:horizontal {background: none
                   <string>Record Finish</string>
                  </property>
                 </widget>
-                <widget class="QPushButton" name="toCsvBtn_2">
-                 <property name="geometry">
-                  <rect>
-                   <x>1780</x>
-                   <y>240</y>
-                   <width>91</width>
-                   <height>28</height>
-                  </rect>
-                 </property>
-                 <property name="text">
-                  <string>CSV로 저장</string>
-                 </property>
-                </widget>
                 <widget class="QLabel" name="recordDataLengthLabel_2">
                  <property name="geometry">
                   <rect>
                    <x>1780</x>
-                   <y>280</y>
+                   <y>250</y>
                    <width>221</width>
                    <height>16</height>
                   </rect>
@@ -1793,19 +1754,6 @@ QScrollBar:add-line:horizontal, QScrollBar:sub-line:horizontal {background: none
                  </property>
                  <property name="text">
                   <string>CSV 저장일시 : None</string>
-                 </property>
-                </widget>
-                <widget class="QPushButton" name="recordResetBtn_2">
-                 <property name="geometry">
-                  <rect>
-                   <x>1780</x>
-                   <y>310</y>
-                   <width>93</width>
-                   <height>28</height>
-                  </rect>
-                 </property>
-                 <property name="text">
-                  <string>기록 초기화</string>
                  </property>
                 </widget>
                </widget>
