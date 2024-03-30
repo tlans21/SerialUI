@@ -564,8 +564,6 @@ class WindowClass(QMainWindow, form_class):
             QMessageBox.warning(self, "Invalid Input", "올바르지 못한 입력 값 입니다.")
             return
         print("주기 : ", str_interval)
-        if not str_interval:
-            return
         interval = float(str_interval)
 
 
