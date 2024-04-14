@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1965</width>
+    <width>1938</width>
     <height>885</height>
    </rect>
   </property>
@@ -14,10 +14,13 @@
    <string>모니터링 소프트웨어 V1.0</string>
   </property>
   <widget class="QTabWidget" name="tabWidget_1">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>10</y>
+     <x>0</x>
+     <y>0</y>
      <width>1931</width>
      <height>741</height>
     </rect>
@@ -73,8 +76,14 @@
        <height>23</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <family>Consolas</family>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
      <property name="text">
-      <string>Enter 1</string>
+      <string>START</string>
      </property>
     </widget>
     <widget class="QLineEdit" name="input_Interval">
@@ -780,6 +789,39 @@
       <enum>Qt::AutoText</enum>
      </property>
     </widget>
+    <widget class="QTableWidget" name="RelayTable">
+     <property name="geometry">
+      <rect>
+       <x>890</x>
+       <y>450</y>
+       <width>131</width>
+       <height>91</height>
+      </rect>
+     </property>
+     <row>
+      <property name="text">
+       <string>Pre-Charge</string>
+      </property>
+     </row>
+     <row>
+      <property name="text">
+       <string>Main Relay</string>
+      </property>
+     </row>
+     <column>
+      <property name="text">
+       <string>Status       </string>
+      </property>
+     </column>
+     <item row="0" column="0">
+      <property name="text">
+       <string/>
+      </property>
+      <property name="textAlignment">
+       <set>AlignTrailing|AlignVCenter</set>
+      </property>
+     </item>
+    </widget>
    </widget>
    <widget class="QWidget" name="tab_2">
     <attribute name="title">
@@ -820,8 +862,14 @@
        <height>23</height>
       </rect>
      </property>
+     <property name="font">
+      <font>
+       <family>Consolas</family>
+       <pointsize>12</pointsize>
+      </font>
+     </property>
      <property name="text">
-      <string>Enter 2</string>
+      <string>START</string>
      </property>
     </widget>
     <widget class="QLineEdit" name="input_Interval_2">
