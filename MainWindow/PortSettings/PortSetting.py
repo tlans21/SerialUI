@@ -21,10 +21,10 @@ class PortSettingService(QWidget):
         parent.BaudCBox.addItems(baud_list)
 
          # 포트를 여는 Open / Close 버튼을 눌렀을때 발생하는 이벤트 설정
-        parent.Btn_close.setEnabled(False)     # 비활성화
-        parent.Btn_open.setEnabled(True)       # 활성화
-        parent.Btn_open.clicked.connect(self.openPort)
-        parent.Btn_close.clicked.connect(self.closePort)
+        self.parent().Btn_close.setEnabled(False)     # 비활성화
+        self.parent().Btn_open.setEnabled(True)       # 활성화
+        self.parent().Btn_open.clicked.connect(self.openPort)
+        self.parent().Btn_close.clicked.connect(self.closePort)
         
         #Interval Enter 1 버튼에 기능을 연결 => System measurement
         
@@ -81,7 +81,7 @@ class PortSettingService(QWidget):
             self.parent().inputBtn.setEnabled(False)     #Enter 1 버튼 비활성화
         else:
             print("Serial port is not open.")
-            self.openBtn.setEnabled(True)
+            self.parent().openBtn.setEnabled(True)
     
     def getSerial(self):
         return self.ser

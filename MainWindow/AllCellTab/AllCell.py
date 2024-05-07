@@ -1,21 +1,21 @@
-from PyQt5.QtWidgets import QApplication, QWidget
 import os
 from PyQt5.QtWidgets import *
 import serial
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QUrl, QObject, QTimer, QSettings
 
 class ALLCellService(QWidget):
-    def __init__(self, parent):
+    def __init__(self, parent, portSettingServiceInstance):
         super().__init__(parent)
-        self.all_cell_Servcie_instance = ALLCellService
-        self.mediatorInstance = None
+        
+        self.portSettingServiceInstance = portSettingServiceInstance
+        self.ser = self.portSettingServiceInstance.getSerial
+
+
         # 타이머 중개자 객체 의존성 주입
-        self.cnt = 0
-    def setSerial(self, PortSerial):
-        self.ser = PortSerial
-   
-    def setMediatorInstance(self, mediatorInstance):
-        self.mediatorInstance = mediatorInstance
+        self.timer2 = QTimer(self)
+        self.timer2.timeout.connect(self.startTimer2)
+
+    def startTimer2(self):
+        self.disp_cnt_1 += 1
+
     
-    def test(self):
-        self.cnt += 1
-        print(self.cnt)

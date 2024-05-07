@@ -39,11 +39,11 @@ class WindowClass(QMainWindow, form_class):
         # Port 서비스 객체 생성
         self.portSettingServiceInstacne = PortSettingService(self)
         # system 서비스 생성
-        self.systemServiceInstance = SystemService(self)
+        self.systemServiceInstance = SystemService(self, self.portSettingServiceInstacne)
         # all Cell 서비스 객체 생성
-        self.allCellServiceInstance = ALLCellService(self)
+        self.allCellServiceInstance = ALLCellService(self, self.portSettingServiceInstacne)
         # system, allCell Service, portSettingService 객체 중개자 인스턴스 생성 
-        self.TimerMediatorInstance = TimerMediatorService(self, self.systemServiceInstance, self.allCellServiceInstance, self.portSettingServiceInstacne)
+        self.TimerMediatorInstance = TimerMediatorService(self, self.systemServiceInstance, self.allCellServiceInstance)
         
     
 
