@@ -5,11 +5,14 @@ import serial
 import time
 import csv
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QUrl, QObject, QTimer, QSettings
+from PyQt5.QtGui import QColor, QFont
 
 class SystemService(QWidget):
     
     def __init__(self, parent, portSettingServiceInstance):
         super().__init__(parent)
+
+
 
         self.portSettingServiceInstance = portSettingServiceInstance
         self.ser = None
@@ -33,13 +36,16 @@ class SystemService(QWidget):
         # 기록 플래그 => True : 기록 시작, False : 기록 시작 X
         self.record_flag_1 = False
 
+    def getPortSettingServiceInstance(self):
+        return self.portSettingServiceInstance
+
     def setOnClickRlyOnBtn(self): 
         msg = QMessageBox()
         msg.setText("Are you sure [ON] ?")
         msg.setStandardButtons(QMessageBox.Yes|QMessageBox.No)
         msg.setDefaultButton(QMessageBox.No)
         
-        retval=msg.exec_()
+        retval = msg.exec_()
 
         if retval == QMessageBox.Yes :
             print('messagebox Yes : ', retval)
@@ -72,7 +78,29 @@ class SystemService(QWidget):
             elif retval == QMessageBox.No :
                 return
 
+    def checkBit(self, bit):
+        item = QTableWidgetItem()
+
+        font = QFont()
+        if bit == 0:
+            font.setPointSize(10)
+            item.setFont(font)
+            item.setText(" ◯")
+            item.setForeground(QColor("black"))    
+        else:
+            font.setPointSize(8)
+            item.setFont(font)
+            item.setText(" 🔴")
+            item.setForeground(QColor("red"))
+
+        return item
+
     def startTimer(self): 
+        # 포트 연결이 끊기거나 연결되어 있지 않을시 진행 안되도록 수정
+        if self.ser == None:
+            return
+        self.parent().Btn_close.setEnabled(False)
+        self.parent().Btn_close.setStyleSheet(  "QPushButton { background-color :gray}");
         self.disp_cnt_1 += 1   # Measurement 횟수 숫자 표시
         self.parent().label_cnt.setStyleSheet("color: blue")  # Set text color to blue
         self.parent().label_cnt.setText(str(self.disp_cnt_1))
@@ -97,6 +125,8 @@ class SystemService(QWidget):
 
         for step, data in enumerate(self.text):
             encode_data = data.encode()
+            print(self.ser)
+            
             self.ser.write(encode_data) #Send A~E for request data
             time.sleep(0.1)  
 
@@ -163,7 +193,7 @@ class SystemService(QWidget):
                             for col in range(0, len(display_data)):
                                 cdata = QTableWidgetItem(str(display_data[col]))
                                 cdata.setTextAlignment(0x0004 | 0x0080)  # Qt.AlignCenter
-                                self.tableWidget.setItem(step*5+i, col, cdata)
+                                self.parent().tableWidget.setItem(step*5+i, col, cdata)
 
                             if (self.record_flag_1):
                                 with open('AtoE.csv', 'a', newline='',  encoding='ANSI') as csv_file:
@@ -232,31 +262,36 @@ class SystemService(QWidget):
                         Main_relay = int(buffer[18],16)
                         #Main_relay = 1
 
-                        bit_pre  = self.bitCheck(Pre_charge)
-                        bit_main = self.bitCheck(Main_relay)
-                        self.RelayTable.setItem(0,0, bit_pre )
-                        self.RelayTable.setItem(1,0, bit_main)
+                        bit_pre  = self.checkBit(Pre_charge)
+                        bit_main = self.checkBit(Main_relay)
+                        self.parent().RelayTable.setItem(0,0, bit_pre )
+                        self.parent().RelayTable.setItem(1,0, bit_main)
 
                         display_E = (Vrack, Irack, SOC, BMS_MODE, Relay, FAN, Vtarget)                         
                         csv_data_E = (self.disp_cnt_1, Vrack, Irack, SOC, BMS_MODE, Relay, FAN, Vtarget, Diagnostic)                         
 
                         for row in range(len(display_E)):
                             item_E = QTableWidgetItem(str(display_E[row]))
-                            self.systemTable.setItem(row, 0, item_E)
+                            self.parent().systemTable.setItem(row, 0, item_E)
 
                         for row in range(0, 11):
-                            item_diag = self.bitCheck((Diagnostic_list[row]))
-                            self.DiagnosticTable.setItem(row, 0, item_diag)    
+                            item_diag = self.checkBit((Diagnostic_list[row]))
+                            self.parent().DiagnosticTable.setItem(row, 0, item_diag)    
                     
                         if (self.record_flag_1):
                                 with open('Sysdata.csv', 'a', newline='',  encoding='ANSI') as csv_file:
                                     f1b = csv.writer(csv_file)
                                     f1b.writerow(csv_data_E)
-        
+        self.parent().Btn_close.setEnabled(True)
+        self.parent().Btn_close.setStyleSheet(  "QPushButton { background-color :yellow }");
         print("test")
 
 
     def setOnClickSystemBtn(self):
+        if self.ser == None:
+            print("test1")
+            self.ser = self.portSettingServiceInstance.getSerial()
+        
         self.disp_cnt_1 = 0               # Enter 1 버튼이 눌리면 display count_1 = 0 부터 시작
         self.parent().inputBtn.setStyleSheet(  "QPushButton { background-color :yellow }");#색상 변경
         self.parent().inputBtn_2.setStyleSheet("QPushButton { background-color : lightgray }");#색상 변경
@@ -282,6 +317,5 @@ class SystemService(QWidget):
         self.timer.start(self.period)   # 10000 period
         self.startTimer()               # System measurement 함수 시작
 
-    # def setSerial(self, serial):
-    #     self.ser = 
+    
 

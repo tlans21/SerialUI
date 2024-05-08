@@ -35,7 +35,7 @@ class WindowClass(QMainWindow, form_class):
     def __init__(self) :
         super().__init__()
         self.setupUi(self)
-        
+        self.tabWidget_1.setTabEnabled(0, False)
         # Port 서비스 객체 생성
         self.portSettingServiceInstacne = PortSettingService(self)
         # system 서비스 생성
@@ -45,7 +45,6 @@ class WindowClass(QMainWindow, form_class):
         # system, allCell Service, portSettingService 객체 중개자 인스턴스 생성 
         self.TimerMediatorInstance = TimerMediatorService(self, self.systemServiceInstance, self.allCellServiceInstance)
         
-    
 
 
 

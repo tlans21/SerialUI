@@ -23,8 +23,8 @@ class PortSettingService(QWidget):
          # 포트를 여는 Open / Close 버튼을 눌렀을때 발생하는 이벤트 설정
         self.parent().Btn_close.setEnabled(False)     # 비활성화
         self.parent().Btn_open.setEnabled(True)       # 활성화
+        
         self.parent().Btn_open.clicked.connect(self.openPort)
-        self.parent().Btn_close.clicked.connect(self.closePort)
         
         #Interval Enter 1 버튼에 기능을 연결 => System measurement
         
