@@ -23,7 +23,7 @@ class PortSettingService(QWidget):
          # 포트를 여는 Open / Close 버튼을 눌렀을때 발생하는 이벤트 설정
         self.parent().Btn_close.setEnabled(False)     # 비활성화
         self.parent().Btn_open.setEnabled(True)       # 활성화
-        
+
         self.parent().Btn_open.clicked.connect(self.openPort)
         
         #Interval Enter 1 버튼에 기능을 연결 => System measurement
@@ -48,9 +48,11 @@ class PortSettingService(QWidget):
                 self.parent().Port_msg.setText("%s is Open %d bps" % (selected_Port, int(selected_BaudRate)))
                 self.parent().Btn_open.setEnabled(False)    #open 버튼 비활성화
                 self.parent().Btn_open.setStyleSheet("QPushButton { background-color : yellow }");#색상 변경
+                self.parent().Btn_close.setStyleSheet("QPushButton { background-color : white }");
                 self.parent().Btn_close.setEnabled(True)    #Close 버튼 활성화
                 self.parent().Btn_open.setEnabled(False)    #open 버튼 비활성화
                 self.parent().inputBtn.setEnabled(True)     #Enter 1 버튼 활성화
+                self.parent().inputBtn_2.setEnabled(True)     #Enter 2 버튼 활성화
             else:
                 self.parent().Port_msg.setText('Port Open failed')     
 
@@ -72,13 +74,17 @@ class PortSettingService(QWidget):
             # self.timer.stop()               # System measurement 중지
             # self.timer_2.stop()             # All cell measurement 중지
             self.ser.close()
+            print(self.ser)
+            self.ser = None
             self.parent().Port_msg.setText('Port Closed')
             self.parent().Btn_open.setStyleSheet("QPushButton { background-color : white }");#색상 변경
+            self.parent().Btn_close.setStyleSheet("QPushButton { background-color : yellow }");#색상 변경
             self.parent().inputBtn.setStyleSheet("QPushButton { background-color :white }");#색상 변경
             self.parent().inputBtn_2.setStyleSheet("QPushButton { background-color : white }");#색상 변경
             self.parent().Btn_open.setEnabled(True)      #open 버튼 활성화
             self.parent().Btn_close.setEnabled(False)    #close 버튼 비활성화
             self.parent().inputBtn.setEnabled(False)     #Enter 1 버튼 비활성화
+            self.parent().inputBtn_2.setEnabled(False)
         else:
             print("Serial port is not open.")
             self.parent().openBtn.setEnabled(True)

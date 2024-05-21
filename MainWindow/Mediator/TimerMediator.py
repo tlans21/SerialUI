@@ -16,12 +16,13 @@ class TimerMediatorService(QWidget):
         self.portSettingServiceInstance = self.systemServiceInstance.getPortSettingServiceInstance() # 포트 세팅 서비스
 
         # 타이머 
-        self.timer = None
+        self.timer1 = None
         self.timer2 = None
         # 시그널 슬롯 설정
         self.parent().inputBtn.clicked.connect(self.check)
         self.parent().inputBtn_2.clicked.connect(self.check_2)
         self.parent().Btn_close.clicked.connect(self.closePort)
+        
 
         
 
@@ -46,14 +47,13 @@ class TimerMediatorService(QWidget):
         self.allCellServiceInstance.setOnClickAllCellBtn()
 
     def closePort(self):
-        if self.timer1:
-            if self.timer1.isActive():
-                print("타이머 1 중지")
-                self.timer1.stop()
-        if self.timer2:
-            if self.timer2.isActive():
-                print("타이머 2 중지")    
-                self.timer2.stop()
+        if self.timer1.isActive():
+            print("타이머 1 중지")
+            self.timer1.stop()
+    
+        if self.timer2.isActive():
+            print("타이머 2 중지")    
+            self.timer2.stop()
         
         self.portSettingServiceInstance.closePort()
 

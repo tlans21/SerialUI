@@ -20,11 +20,10 @@ class ALLCellService(QWidget):
         self.timer2 = QTimer(self)
         self.timer2.timeout.connect(self.startTimer2)
         self.record_flag_2 = False
+        self.parent().csvBtn_2.clicked.connect(self.csvBtn_2_Push)
         
     def setOnClickAllCellBtn(self):
-        if self.ser == None:
-            print("test2")
-            self.ser = self.portSettingServiceInstance.getSerial()
+        self.ser = self.portSettingServiceInstance.getSerial()
         
         self.disp_cnt_2 = 0               # Enter 1 버튼이 눌리면 display count_1 = 0 부터 시작
         self.parent().inputBtn.setStyleSheet(  "QPushButton { background-color :lightgray }");#색상 변경
@@ -44,7 +43,7 @@ class ALLCellService(QWidget):
        
         self.period_2 = int(interval) * 1000   # ms 단위 이므로 1000울 곱합니다.
         
-        if self.period_2 < 5:
+        if self.period_2 < 5000:
             QMessageBox.warning(self.parent(), "Invalid Input", "1초 이상의 Interval을 입력해주세요")
             return
         
@@ -120,5 +119,23 @@ class ALLCellService(QWidget):
                     f2b.writerow(csv2_T)
                 
             self.ser.reset_input_buffer()
-
+    
+    def csvBtn_2_Push(self):
+        if (self.record_flag_2==False):
+            self.record_flag_2 = True
+            self.parent().csvBtn_2.setStyleSheet("background-color: yellow;")
+            self.parent().csvBtn_2.setText('...Saving... Click to Stop')
+            with open('atos.csv', 'a', newline='',  encoding='ANSI') as csv_file_2:
+                f2a = csv.writer(csv_file_2)
+                header_2a = ("Cnt","Module #","V1","V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12","V13","V14","V15","V16","V17","V18","V19","V20")
+                f2a.writerow(header_2a)
+            
+            with open('Tall.csv', 'a', newline='',  encoding='ANSI') as csv_file:
+                f2b = csv.writer(csv_file)
+                header_2b = ("Cnt","Module #","T1","T2","T3","T4","T5","T6","T7","T8","T9","T10","T11","T12","T13","T14","T15","T16","T17","T18","T19","T20")
+                f2b.writerow(header_2b)    
+        else:
+            self.record_flag_2=False
+            self.parent().csvBtn_2.setText('Click to Save')
+            self.parent().csvBtn_2.setStyleSheet("background-color: white;")
     

@@ -32,7 +32,7 @@ class SystemService(QWidget):
         # Relay OFF 버튼에 기능을 연결 => Btn_Rly_OFF
         self.parent().Btn_Rly_OFF.setEnabled(False)  # Relay OFF 버튼 비활성화  
         self.parent().Btn_Rly_OFF.clicked.connect(self.setOnClickRlyOffBtn)   # Relay OFF
-
+        self.parent().csvBtn.clicked.connect(self.csvBtn_Push)
         # 기록 플래그 => True : 기록 시작, False : 기록 시작 X
         self.record_flag_1 = False
 
@@ -125,7 +125,7 @@ class SystemService(QWidget):
 
         for step, data in enumerate(self.text):
             encode_data = data.encode()
-            print(self.ser)
+            
             
             self.ser.write(encode_data) #Send A~E for request data
             time.sleep(0.1)  
@@ -141,10 +141,9 @@ class SystemService(QWidget):
                 elif (self.ser.in_waiting == 65):
                     
                     while True:
-                        print(self.ser.in_waiting)
+                        
                         Rx = ' '.join([format(byte, '02X') for byte in self.ser.read(1)])
-                        print("Rx: ", Rx)
-                        print("cnt : ", cnt)
+                        
                         buffer[cnt] = Rx
                         cnt += 1
                         #  buffer의 index가 0 ~ 64 총 65개가 만들어짐.
@@ -284,13 +283,11 @@ class SystemService(QWidget):
                                     f1b.writerow(csv_data_E)
         self.parent().Btn_close.setEnabled(True)
         self.parent().Btn_close.setStyleSheet(  "QPushButton { background-color :yellow }");
-        print("test")
+       
 
 
     def setOnClickSystemBtn(self):
-        if self.ser == None:
-            print("test1")
-            self.ser = self.portSettingServiceInstance.getSerial()
+        self.ser = self.portSettingServiceInstance.getSerial()
         
         self.disp_cnt_1 = 0               # Enter 1 버튼이 눌리면 display count_1 = 0 부터 시작
         self.parent().inputBtn.setStyleSheet(  "QPushButton { background-color :yellow }");#색상 변경
@@ -310,12 +307,31 @@ class SystemService(QWidget):
        
         self.period = int(interval) * 1000   # ms 단위 이므로 1000울 곱합니다.
         
-        if self.period < 1:
+        if self.period < 1000:
             QMessageBox.warning(self.parent(), "Invalid Input", "1초 이상의 Interval을 입력해주세요")
             return
         
         self.timer.start(self.period)   # 10000 period
         self.startTimer()               # System measurement 함수 시작
 
+
+    def csvBtn_Push(self):
+        if (self.record_flag_1==False):
+            self.record_flag_1 = True
+            self.parent().csvBtn.setStyleSheet("background-color: yellow;")
+            self.parent().csvBtn.setText('...Saving... Click to Stop')
+            with open('AtoE.csv', 'a', newline='',  encoding='ANSI') as csv_file:
+                f1a = csv.writer(csv_file)
+                header_1a  = ("cnt", "Module #", "Vmodule", "Vcmax", "Vcmin", "Tmax", "Tmin")
+                f1a.writerow(header_1a)
+            with open('Sysdata.csv', 'a', newline='',  encoding='ANSI') as csv_file:
+                f1b = csv.writer(csv_file)
+                header_1b  = ("cnt", "Vrack", "Irack", "SOC", "BMS_MODE", "RELAY", "FAN", "Vtarget", "Diagnostic")
+                f1b.writerow(header_1b)
+
+        else:
+            self.record_flag_1=False
+            self.parent().csvBtn.setText('Click to Save')
+            self.parent().csvBtn.setStyleSheet("background-color: white;")
     
 
