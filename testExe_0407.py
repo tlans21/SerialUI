@@ -12,7 +12,7 @@ import serial
 import time
 import csv
 from PyQt5.QtCore import Qt, QUrl, QObject, QTimer, QSettings
-from PyQt5.QtGui import QColor, QFont
+from PyQt5.QtGui import QColor, QFont, QBrush
 
 
 #UI파일 연결
@@ -25,7 +25,7 @@ else:
     # Running as a script
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
-ui_file_path = os.path.join(script_dir, "My_gui_test_4.ui")
+ui_file_path = os.path.join(script_dir, "My_gui_test_5.ui")
 
 form_class = uic.loadUiType(ui_file_path)[0]
 
@@ -539,7 +539,7 @@ class WindowClass(QMainWindow, form_class) :
                 buffer2 = hex_representation.split()
 
                 Vcell_list = []              
-                Mod =  int(buffer2[3],16) 
+                Mod =  int(buffer2[3],16) # module 번호
                 Vcell_list = [Mod]
                 for i in range(0,20):                  
                     Vcell_H = int(buffer2[2*i + 4],16)
@@ -547,14 +547,14 @@ class WindowClass(QMainWindow, form_class) :
                     Vcell = round(float(Vcell_H *256 + Vcell_L) * 0.001, 3)
                     Vcell_list.append(Vcell)
                
-                display_V= Vcell_list   # Mod번호 + V1~V20
+                display_V = Vcell_list   # Mod번호 + V1~V20
                 csv2_V=[]
                 csv2_V =[self.disp_cnt_2]
                 csv2_V += Vcell_list    # Cnt + Mod번호 + V1~V20
 
                 Tcell_list = []
                 for i in range(48,68):                  
-                    Tcell =  int(buffer2[i],16) -50
+                    Tcell =  int(buffer2[i],16) - 50
                     Tcell_list.append(Tcell)
 
                 display_T= Tcell_list   # T1 ~ T20
@@ -563,19 +563,61 @@ class WindowClass(QMainWindow, form_class) :
                 csv2_T += Tcell_list    # Cnt + Mod번호 + V1~V20
 
                 cnt =  int(buffer2[70],16)
+                # Voltage 테이블에 뿌려주기
+                
+                try:
+                    underVoltageValue = float(self.underVoltageValue.text())
+                    overVoltageValue = float(self.overVoltageValue.text())
+                    self.last_underVoltageValue = underVoltageValue # 값 저장하여 except 발생시 이전 값을 부여하도록함.
+                    self.last_overVoltageValue = overVoltageValue
+                    print(1, underVoltageValue)
+                    print(1, overVoltageValue)
+                except ValueError:
+                    underVoltageValue = getattr(self, 'last_underVoltageValue', 2.5) # 디폴트 값 2.5
+                    overVoltageValue = getattr(self, 'last_overVoltageValue', 1.5) # 디폴트 값 1.5
+                    print(2, underVoltageValue)
+                    print(2, overVoltageValue)
+
 
                 for col in range(0, len(display_V)):
                     #self.tableWidget_2.setItem(step2, col, QTableWidgetItem(str(csv2_data[col])))
-                    alldata = QTableWidgetItem(str(display_V[col]))
-                    alldata.setTextAlignment(0x0004 | 0x0080)  # Qt.AlignCenter
-                    self.tableWidget_2.setItem(step2, col, alldata)
+                    all_data = QTableWidgetItem(str(display_V[col]))
+                    all_data.setTextAlignment(0x0004 | 0x0080)  # Qt.AlignCenter
+            
+                    if col == 0:
+                        all_data.setForeground(QBrush(QColor(0, 0, 0)))
+                    elif col != 0:
+                        if overVoltageValue < float(all_data.text()) <= underVoltageValue: 
+                            all_data.setForeground(QBrush(QColor(0, 0, 0))) 
+                        elif float(all_data.text()) > underVoltageValue:
+                            all_data.setForeground(QBrush(QColor(255, 0, 0))) #설정 값보다 전압이 높다면 빨간색
+                            
+                        elif float(all_data.text()) < overVoltageValue:
+                            all_data.setForeground(QBrush(QColor(0, 0, 255))) #설정 값보다 전압이 높다면 파란색
+                            
+                    self.tableWidget_2.setItem(step2, col, all_data)
+                
+                try:
+                    overTemperatureValue = float(self.overTemperatureValue.text())
+                    self.last_overTemperatureValue = overTemperatureValue
+                    
+                except ValueError:
+                    overTemperatureValue = getattr(self, 'last_overTemperatureValue', 50) # 디폴트 값 50
 
+                # Temperature 테이블에 뿌려주기
                 for col in range(0, len(display_T)):
                     #self.tableWidget_2.setItem(index, col, QTableWidgetItem(str(csv2_data[col])))
                     T_data = QTableWidgetItem(str(display_T[col]))
                     T_data.setTextAlignment(0x0004 | 0x0080)  # Qt.AlignCenter
-                    self.Temp_table.setItem(step2, col, T_data)    
 
+                    if overTemperatureValue >= float(T_data.text()):
+                        T_data.setForeground(QBrush(QColor(255, 0, 0))) # 설정 값보다 온도가 낮다면 파란색
+                    elif overTemperatureValue < float(T_data.text()):
+                        T_data.setForeground(QBrush(QColor(0, 0, 0)))
+                    self.Temp_table.setItem(step2, col, T_data)
+
+
+                    
             if (self.record_flag_2):
                 with open('atos.csv', 'a', newline='',  encoding='ANSI') as csv_file:
                     f2a = csv.writer(csv_file)

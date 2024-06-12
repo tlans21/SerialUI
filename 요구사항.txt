@@ -1,0 +1,5 @@
+관심있는 전압은 Under voltage(UV), Over Voltage(OV), Over Temperature(OT)
+
+이 세개의 값을 입력 받고, 이 값보다 작으면 (UV) 커지면 
+(OV, OT) 값들이 위치한 부분이나 색상이 파란색이나 빨간색으로 보여지고싶음
+전압이나 온도가 범위를 벗어나면 색상이 UV, 빨간색 (OV, OT)로 변경
